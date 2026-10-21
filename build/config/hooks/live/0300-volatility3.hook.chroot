@@ -1,0 +1,7 @@
+#!/bin/sh
+# Volatility 3 (memory forensics). Debian packaging lags upstream, so install
+# a pinned version via pip. Offline-friendly if a wheel cache is staged.
+set -e
+echo "I: installing Volatility 3"
+pip3 install --break-system-packages "volatility3==2.8.0" || \
+    echo "W: volatility3 install failed (no network?) — document as optional component"

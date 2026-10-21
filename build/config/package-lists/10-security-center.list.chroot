@@ -1,0 +1,11 @@
+# CyberDistro — Security Center runtime dependencies (Python + Qt)
+python3
+python3-pyside6.qtcore
+python3-pyside6.qtgui
+python3-pyside6.qtwidgets
+python3-lxml
+python3-yaml
+python3-psutil
+python3-markdown
+python3-reportlab
+python3-pip

@@ -1,0 +1,24 @@
+============================================================
+CyberDistro test suite — 2026-10-21T20:11:15Z
+============================================================
+[1/4] Security Center unit tests
+......................
+----------------------------------------------------------------------
+Ran 22 tests in 0.330s
+
+OK
+  PASS
+[2/4] Shell script syntax (bash -n)
+  OK   privacy/bin/privacy-mode
+  OK   privacy/tests/check-dns-leak.sh
+  OK   privacy/tests/check-tor-path.sh
+  OK   privacy/persistence/make-persistence.sh
+  OK   build/build.sh
+  OK   release/make-release.sh
+  OK   release/verify.sh
+[3/4] nftables kill-switch syntax (nft -c)
+  OK
+[4/4] SBOM generation
+  OK (120 componenti)
+============================================================
+RISULTATO: TUTTO OK

@@ -1,0 +1,20 @@
+CyberDistro — privacy & build static checks
+Date (UTC): recorded at build time in the development sandbox
+Host: Linux x86_64, nft present, root available
+
+[nftables kill-switch] syntax validation
+  command: nft -c -f <killswitch rendered with TOR_UID=123>
+  result : OK — ruleset syntactically valid
+
+[shell scripts] bash -n syntax validation
+  privacy/bin/privacy-mode .................. OK
+  privacy/tests/check-tor-path.sh ........... OK
+  privacy/tests/check-dns-leak.sh ........... OK
+  privacy/persistence/make-persistence.sh ... OK
+  build/build.sh ............................ OK
+
+NOT exercised here (require live system / hardware / network):
+  - actual Tor path and fail-closed behavior (privacy/tests on a live system)
+  - LUKS2 persistence create/unlock/recover across reboots
+  - live-build ISO generation (needs Debian host, mirrors, privileged chroot)
+These are listed as open items in docs/architecture/03-status.md.

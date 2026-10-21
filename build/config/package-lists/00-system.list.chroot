@@ -1,0 +1,50 @@
+# CyberDistro — base system, live, firmware, desktop
+# --- Live boot + persistence ---
+live-boot
+live-config
+live-config-systemd
+cryptsetup
+cryptsetup-initramfs
+# --- Kernel & firmware (hardware support; documented non-free blobs) ---
+linux-image-amd64
+firmware-linux
+firmware-linux-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-misc-nonfree
+# --- Desktop: KDE Plasma (Wayland + X11 fallback) ---
+plasma-desktop
+plasma-workspace
+sddm
+kwin-wayland
+plasma-nm
+plasma-pa
+powerdevil
+systemsettings
+dolphin
+konsole
+kate
+ark
+spectacle
+okular
+# --- Look & feel (libre assets only; no proprietary Apple assets) ---
+papirus-icon-theme
+fonts-inter
+fonts-noto
+fonts-noto-color-emoji
+# --- Core userland ---
+sudo
+polkitd
+pkexec
+network-manager
+firewalld
+nftables
+pipewire
+pipewire-pulse
+wireplumber
+# --- Accessibility ---
+orca
+# --- Localization (it + en) ---
+task-italian
+locales

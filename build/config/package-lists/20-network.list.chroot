@@ -1,0 +1,14 @@
+# 8.1 Network Security — inventory, traffic analysis, service/config verification
+nmap
+wireshark
+tshark
+tcpdump
+zeek
+whois
+dnsutils
+ldnsutils
+netcat-openbsd
+socat
+mtr-tiny
+arp-scan
+masscan

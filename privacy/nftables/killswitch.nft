@@ -1,0 +1,62 @@
+#!/usr/sbin/nft -f
+# CyberDistro — Tor kill-switch (fail-closed).
+#
+# Goal: in "Tor Anonymity" mode, ALL outbound traffic must go through Tor.
+# Anything that is not Tor-destined is DROPPED — there is no silent fallback to
+# a direct connection. If Tor is down, traffic is blocked, not leaked.
+#
+# Model:
+#   * The tor daemon runs as user `debian-tor` (Debian) and is allowed to open
+#     outbound connections (it is what talks to the Tor network).
+#   * Loopback is allowed (Tor's SOCKS/DNS/Trans ports live there).
+#   * Everything else outbound is rejected.
+#   * DNS is forced to Tor's DNSPort (53 on 127.0.0.1) via the TransPort setup;
+#     direct UDP/53 to the outside is dropped (prevents DNS leaks).
+#
+# This ruleset is LOADED ONLY when the user selects Tor mode (privacy-mode tool)
+# and is removed when leaving it. It is NOT enabled at boot by default.
+#
+# Verify after loading:   sudo nft list table inet cyberdistro_killswitch
+# Syntax-check only:      sudo nft -c -f killswitch.nft
+
+table inet cyberdistro_killswitch {
+
+    # Set the uid of the tor daemon here (resolved by the loader script).
+    # Default assumes debian-tor; the privacy-mode tool rewrites @TOR_UID@.
+    chain output {
+        type filter hook output priority 0; policy drop;
+
+        # Allow established/related return traffic.
+        ct state established,related accept
+
+        # Allow all loopback (Tor listens here: SOCKS 9050, DNS 5353/53, Trans 9040).
+        oifname "lo" accept
+        ip daddr 127.0.0.0/8 accept
+        ip6 daddr ::1 accept
+
+        # Allow the Tor process itself to reach the network.
+        meta skuid @TOR_UID@ accept
+
+        # Allow the transparent-proxy redirect path (packets already marked).
+        meta mark 0x1 accept
+
+        # Explicitly drop clear-text DNS to the outside (belt-and-suspenders).
+        udp dport 53 drop
+        tcp dport 53 drop
+
+        # Everything else outbound is refused (fail-closed).
+        counter reject with icmpx type admin-prohibited
+    }
+
+    chain input {
+        type filter hook input priority 0; policy drop;
+        ct state established,related accept
+        iifname "lo" accept
+        # No inbound services by default.
+        counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+}

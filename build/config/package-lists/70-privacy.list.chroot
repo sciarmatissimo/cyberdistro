@@ -1,0 +1,9 @@
+# 9. Privacy & anonymity
+tor
+torsocks
+nyx
+# Tor Browser itself is fetched & verified from the Tor Project by hook 0400
+# (it must not be repackaged in a way that alters its fingerprint resistance).
+# Firewall/kill-switch tooling:
+nftables
+iproute2

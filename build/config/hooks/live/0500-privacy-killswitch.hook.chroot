@@ -1,0 +1,14 @@
+#!/bin/sh
+# Install the Tor kill-switch ruleset and its systemd unit, DISABLED by default.
+# Privacy modes are opt-in and switched by the Security Center / privacy CLI.
+set -e
+echo "I: installing privacy kill-switch (disabled by default)"
+
+install -D -m644 /opt/cyberdistro-src/privacy/nftables/killswitch.nft \
+    /etc/cyberdistro/privacy/killswitch.nft 2>/dev/null || \
+install -D -m644 /usr/share/cyberdistro/privacy/killswitch.nft \
+    /etc/cyberdistro/privacy/killswitch.nft 2>/dev/null || \
+    echo "W: killswitch.nft not staged; privacy CLI will install it on first use"
+
+# systemd unit is shipped under includes.chroot; ensure it is NOT enabled.
+systemctl disable cyberdistro-killswitch.service 2>/dev/null || true

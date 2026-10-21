@@ -1,0 +1,24 @@
+#!/bin/sh
+# Install the CyberDistro Security Center into the live system.
+# The source tree is copied into the chroot by the build.sh staging step
+# (into /opt/cyberdistro-src/security-center). Here we install it.
+set -e
+
+SRC=/opt/cyberdistro-src/security-center
+if [ ! -d "$SRC" ]; then
+    echo "W: Security Center source not staged at $SRC — skipping (dev build)"
+    exit 0
+fi
+
+echo "I: installing Security Center"
+pip3 install --break-system-packages --no-index --no-build-isolation "$SRC" \
+    || pip3 install --break-system-packages "$SRC"
+
+# Desktop entry + launcher icon
+install -D -m644 "$SRC/packaging/cyberdistro-security-center.desktop" \
+    /usr/share/applications/cyberdistro-security-center.desktop
+install -D -m644 "$SRC/packaging/icon.svg" \
+    /usr/share/icons/hicolor/scalable/apps/cyberdistro-security-center.svg
+
+# Clean the staged source out of the final image
+rm -rf /opt/cyberdistro-src

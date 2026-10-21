@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberdistro-security-center"
+version = "0.1.0"
+description = "CyberDistro Security Center — guided, safe-by-default front-end for authorized security tooling"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "CyberDistro project contributors" }]
+dependencies = [
+    "PyYAML>=6.0",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.6"]
+report = ["reportlab>=4.0", "markdown>=3.5"]
+
+[project.scripts]
+cyberdistro-sc = "cyberdistro_sc.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cyberdistro_sc = ["i18n/*.yaml", "data/*.yaml"]

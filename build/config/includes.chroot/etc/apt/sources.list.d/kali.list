@@ -1,0 +1,5 @@
+# Kali rolling repository — SECONDARY source, pinned LOW (see preferences.d/kali).
+# Present so that `apt install <kali-tool>` works, without letting Kali upgrade
+# the whole Debian-stable base. The signing key is installed by the
+# 0100-kali-archive-keyring hook.
+deb [signed-by=/usr/share/keyrings/kali-archive-keyring.gpg] http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware

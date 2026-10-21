@@ -1,0 +1,1073 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-21T20:14:16.699743+00:00",
+    "component": {
+      "type": "operating-system",
+      "name": "CyberDistro",
+      "version": "0.1.0-alpha"
+    },
+    "tools": [
+      {
+        "name": "cyberdistro-generate-sbom",
+        "version": "0.1.0"
+      }
+    ],
+    "notes": "Versions marked 'resolved-at-build' are fixed by apt/dpkg when the ISO is built; this SBOM enumerates the component set and licenses without inventing version strings."
+  },
+  "components": [
+    {
+      "type": "application",
+      "name": "cyberdistro-security-center",
+      "version": "0.1.0",
+      "group": "cyberdistro",
+      "purl": "pkg:deb/debian/cyberdistro-security-center",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-3.0-or-later"
+          }
+        }
+      ],
+      "description": "First-party Security Center"
+    },
+    {
+      "type": "library",
+      "name": "live-boot",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/live-boot"
+    },
+    {
+      "type": "library",
+      "name": "live-config",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/live-config"
+    },
+    {
+      "type": "library",
+      "name": "live-config-systemd",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/live-config-systemd"
+    },
+    {
+      "type": "library",
+      "name": "cryptsetup",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/cryptsetup"
+    },
+    {
+      "type": "library",
+      "name": "cryptsetup-initramfs",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/cryptsetup-initramfs"
+    },
+    {
+      "type": "library",
+      "name": "linux-image-amd64",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/linux-image-amd64"
+    },
+    {
+      "type": "library",
+      "name": "firmware-linux",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-linux"
+    },
+    {
+      "type": "library",
+      "name": "firmware-linux-nonfree",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-linux-nonfree"
+    },
+    {
+      "type": "library",
+      "name": "firmware-iwlwifi",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-iwlwifi"
+    },
+    {
+      "type": "library",
+      "name": "firmware-realtek",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-realtek"
+    },
+    {
+      "type": "library",
+      "name": "firmware-atheros",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-atheros"
+    },
+    {
+      "type": "library",
+      "name": "firmware-misc-nonfree",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firmware-misc-nonfree"
+    },
+    {
+      "type": "library",
+      "name": "plasma-desktop",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/plasma-desktop",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "plasma-workspace",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/plasma-workspace"
+    },
+    {
+      "type": "library",
+      "name": "sddm",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/sddm"
+    },
+    {
+      "type": "library",
+      "name": "kwin-wayland",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/kwin-wayland"
+    },
+    {
+      "type": "library",
+      "name": "plasma-nm",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/plasma-nm"
+    },
+    {
+      "type": "library",
+      "name": "plasma-pa",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/plasma-pa"
+    },
+    {
+      "type": "library",
+      "name": "powerdevil",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/powerdevil"
+    },
+    {
+      "type": "library",
+      "name": "systemsettings",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/systemsettings"
+    },
+    {
+      "type": "library",
+      "name": "dolphin",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/dolphin"
+    },
+    {
+      "type": "library",
+      "name": "konsole",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/konsole"
+    },
+    {
+      "type": "library",
+      "name": "kate",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/kate"
+    },
+    {
+      "type": "library",
+      "name": "ark",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/ark"
+    },
+    {
+      "type": "library",
+      "name": "spectacle",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/spectacle"
+    },
+    {
+      "type": "library",
+      "name": "okular",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/okular"
+    },
+    {
+      "type": "library",
+      "name": "papirus-icon-theme",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/papirus-icon-theme"
+    },
+    {
+      "type": "library",
+      "name": "fonts-inter",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/fonts-inter"
+    },
+    {
+      "type": "library",
+      "name": "fonts-noto",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/fonts-noto"
+    },
+    {
+      "type": "library",
+      "name": "fonts-noto-color-emoji",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/fonts-noto-color-emoji"
+    },
+    {
+      "type": "library",
+      "name": "sudo",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/sudo"
+    },
+    {
+      "type": "library",
+      "name": "polkitd",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/polkitd"
+    },
+    {
+      "type": "library",
+      "name": "pkexec",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/pkexec"
+    },
+    {
+      "type": "library",
+      "name": "network-manager",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/network-manager"
+    },
+    {
+      "type": "library",
+      "name": "firewalld",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/firewalld"
+    },
+    {
+      "type": "library",
+      "name": "nftables",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/nftables"
+    },
+    {
+      "type": "library",
+      "name": "pipewire",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/pipewire"
+    },
+    {
+      "type": "library",
+      "name": "pipewire-pulse",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/pipewire-pulse"
+    },
+    {
+      "type": "library",
+      "name": "wireplumber",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/wireplumber"
+    },
+    {
+      "type": "library",
+      "name": "orca",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/orca"
+    },
+    {
+      "type": "library",
+      "name": "task-italian",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/task-italian"
+    },
+    {
+      "type": "library",
+      "name": "locales",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/locales"
+    },
+    {
+      "type": "library",
+      "name": "python3",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3"
+    },
+    {
+      "type": "library",
+      "name": "python3-pyside6.qtcore",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-pyside6.qtcore"
+    },
+    {
+      "type": "library",
+      "name": "python3-pyside6.qtgui",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-pyside6.qtgui"
+    },
+    {
+      "type": "library",
+      "name": "python3-pyside6.qtwidgets",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-pyside6.qtwidgets"
+    },
+    {
+      "type": "library",
+      "name": "python3-lxml",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-lxml"
+    },
+    {
+      "type": "library",
+      "name": "python3-yaml",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-yaml"
+    },
+    {
+      "type": "library",
+      "name": "python3-psutil",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-psutil"
+    },
+    {
+      "type": "library",
+      "name": "python3-markdown",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-markdown"
+    },
+    {
+      "type": "library",
+      "name": "python3-reportlab",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-reportlab"
+    },
+    {
+      "type": "library",
+      "name": "python3-pip",
+      "version": "resolved-at-build",
+      "group": "os-packages/security-center",
+      "purl": "pkg:deb/debian/python3-pip"
+    },
+    {
+      "type": "library",
+      "name": "nmap",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/nmap",
+      "licenses": [
+        {
+          "license": {
+            "name": "NPSL (Nmap Public Source License)"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "wireshark",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/wireshark",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tshark",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/tshark",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tcpdump",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/tcpdump",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "zeek",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/zeek",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "whois",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/whois"
+    },
+    {
+      "type": "library",
+      "name": "dnsutils",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/dnsutils"
+    },
+    {
+      "type": "library",
+      "name": "ldnsutils",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/ldnsutils"
+    },
+    {
+      "type": "library",
+      "name": "netcat-openbsd",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/netcat-openbsd"
+    },
+    {
+      "type": "library",
+      "name": "socat",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/socat"
+    },
+    {
+      "type": "library",
+      "name": "mtr-tiny",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/mtr-tiny"
+    },
+    {
+      "type": "library",
+      "name": "arp-scan",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/arp-scan"
+    },
+    {
+      "type": "library",
+      "name": "masscan",
+      "version": "resolved-at-build",
+      "group": "os-packages/network",
+      "purl": "pkg:deb/debian/masscan"
+    },
+    {
+      "type": "library",
+      "name": "zaproxy",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/zaproxy",
+      "licenses": [
+        {
+          "license": {
+            "name": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "nikto",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/nikto",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-only"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "wafw00f",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/wafw00f"
+    },
+    {
+      "type": "library",
+      "name": "whatweb",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/whatweb"
+    },
+    {
+      "type": "library",
+      "name": "wapiti",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/wapiti"
+    },
+    {
+      "type": "library",
+      "name": "dirb",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/dirb"
+    },
+    {
+      "type": "library",
+      "name": "gobuster",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/gobuster"
+    },
+    {
+      "type": "library",
+      "name": "sqlmap",
+      "version": "resolved-at-build",
+      "group": "os-packages/web",
+      "purl": "pkg:deb/debian/sqlmap"
+    },
+    {
+      "type": "library",
+      "name": "sleuthkit",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/sleuthkit",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later / CPL-1.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "autopsy",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/autopsy",
+      "licenses": [
+        {
+          "license": {
+            "name": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "yara",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/yara",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ewf-tools",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/ewf-tools"
+    },
+    {
+      "type": "library",
+      "name": "libewf-dev",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/libewf-dev"
+    },
+    {
+      "type": "library",
+      "name": "dc3dd",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/dc3dd"
+    },
+    {
+      "type": "library",
+      "name": "dcfldd",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/dcfldd"
+    },
+    {
+      "type": "library",
+      "name": "ddrescue",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/ddrescue"
+    },
+    {
+      "type": "library",
+      "name": "hashdeep",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/hashdeep"
+    },
+    {
+      "type": "library",
+      "name": "exiftool",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/exiftool",
+      "licenses": [
+        {
+          "license": {
+            "name": "Artistic-1.0 / GPL-1.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "foremost",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/foremost"
+    },
+    {
+      "type": "library",
+      "name": "scalpel",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/scalpel"
+    },
+    {
+      "type": "library",
+      "name": "bulk-extractor",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/bulk-extractor"
+    },
+    {
+      "type": "library",
+      "name": "plaso",
+      "version": "resolved-at-build",
+      "group": "os-packages/forensics",
+      "purl": "pkg:deb/debian/plaso"
+    },
+    {
+      "type": "library",
+      "name": "ghidra",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/ghidra",
+      "licenses": [
+        {
+          "license": {
+            "name": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "radare2",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/radare2",
+      "licenses": [
+        {
+          "license": {
+            "name": "LGPL-3.0-only"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rizin",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/rizin",
+      "licenses": [
+        {
+          "license": {
+            "name": "LGPL-3.0-only"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gdb",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/gdb",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gdb-multiarch",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/gdb-multiarch"
+    },
+    {
+      "type": "library",
+      "name": "strace",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/strace"
+    },
+    {
+      "type": "library",
+      "name": "ltrace",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/ltrace"
+    },
+    {
+      "type": "library",
+      "name": "binwalk",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/binwalk",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "file",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/file"
+    },
+    {
+      "type": "library",
+      "name": "xxd",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/xxd"
+    },
+    {
+      "type": "library",
+      "name": "hexedit",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/hexedit"
+    },
+    {
+      "type": "library",
+      "name": "python3-capstone",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/python3-capstone"
+    },
+    {
+      "type": "library",
+      "name": "python3-unicorn",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/python3-unicorn"
+    },
+    {
+      "type": "library",
+      "name": "clamav",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/clamav",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-only"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "clamav-freshclam",
+      "version": "resolved-at-build",
+      "group": "os-packages/reversing",
+      "purl": "pkg:deb/debian/clamav-freshclam"
+    },
+    {
+      "type": "library",
+      "name": "john",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/john",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "hashcat",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/hashcat",
+      "licenses": [
+        {
+          "license": {
+            "name": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "hashid",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/hashid"
+    },
+    {
+      "type": "library",
+      "name": "openssl",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/openssl",
+      "licenses": [
+        {
+          "license": {
+            "name": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gnupg",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/gnupg",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "testssl.sh",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/testssl.sh"
+    },
+    {
+      "type": "library",
+      "name": "sslscan",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/sslscan"
+    },
+    {
+      "type": "library",
+      "name": "aircrack-ng",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/aircrack-ng",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "iw",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/iw"
+    },
+    {
+      "type": "library",
+      "name": "wireless-tools",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/wireless-tools"
+    },
+    {
+      "type": "library",
+      "name": "reaver",
+      "version": "resolved-at-build",
+      "group": "os-packages/crypto-wireless",
+      "purl": "pkg:deb/debian/reaver"
+    },
+    {
+      "type": "library",
+      "name": "tor",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/tor",
+      "licenses": [
+        {
+          "license": {
+            "name": "BSD-3-Clause"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "torsocks",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/torsocks",
+      "licenses": [
+        {
+          "license": {
+            "name": "GPL-2.0-only"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "nyx",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/nyx"
+    },
+    {
+      "type": "library",
+      "name": "iproute2",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/iproute2"
+    },
+    {
+      "type": "application",
+      "name": "tor-browser",
+      "version": "resolved-at-build",
+      "group": "external",
+      "purl": "pkg:deb/debian/tor-browser",
+      "licenses": [
+        {
+          "license": {
+            "name": "MPL-2.0 / Tor Project"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://dist.torproject.org (GPG-verified in hook 0400)"
+        }
+      ],
+      "description": "Not repackaged; bundled as the official build to preserve fingerprint resistance."
+    },
+    {
+      "type": "application",
+      "name": "volatility3",
+      "version": "resolved-at-build",
+      "group": "external",
+      "purl": "pkg:deb/debian/volatility3",
+      "licenses": [
+        {
+          "license": {
+            "name": "Volatility Software License (VSL) / custom"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "pip (hook 0300), version pinned 2.8.0"
+        }
+      ],
+      "description": ""
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ CyberDistro — original project code (Security Center, build scripts,
+ documentation and configuration authored by this project).
+ Copyright (C) 2026  CyberDistro project contributors
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ The full text of the GNU General Public License version 3 is available
+ at the URL above and should be included in distributed builds at
+ /usr/share/common-licenses/GPL-3 on the resulting system.
+
+ NOTE ON THIRD-PARTY SOFTWARE:
+ This license covers only the original code of the CyberDistro project.
+ Third-party tools bundled by the build (Debian packages, Kali tools,
+ Tor Browser, Ghidra, Wireshark, etc.) are distributed under their own
+ licenses. See the sbom/ directory and licenses/ for the component
+ inventory and attributions.

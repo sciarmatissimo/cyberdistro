@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# CyberDistro privacy-mode — switch privacy profile. PRIVILEGED + EXPLICIT.
+#
+#   privacy-mode status           show current profile and posture
+#   privacy-mode standard         remove kill-switch; standard browsing
+#   privacy-mode tor              load fail-closed Tor kill-switch
+#   privacy-mode hardened         Tor kill-switch + extra outbound restrictions
+#   privacy-mode off              remove the kill-switch table
+#
+# This never changes profile silently: it is invoked explicitly by the user (or
+# by the Security Center after an explicit confirmation) and prints what it did.
+set -euo pipefail
+
+RULES_DIR="${CYBERDISTRO_PRIVACY_DIR:-/etc/cyberdistro/privacy}"
+KS="${RULES_DIR}/killswitch.nft"
+TABLE="cyberdistro_killswitch"
+TOR_USER="${TOR_USER:-debian-tor}"
+
+need_root(){ [ "$(id -u)" -eq 0 ] || { echo "Esegui come root (pkexec/sudo)." >&2; exit 1; }; }
+
+render(){
+    # Substitute the tor daemon uid into the template → stdout.
+    local uid
+    uid="$(id -u "${TOR_USER}" 2>/dev/null || echo 0)"
+    if [ "${uid}" = "0" ]; then
+        echo "ATTENZIONE: utente tor '${TOR_USER}' non trovato; il kill-switch" >&2
+        echo "            bloccherebbe anche Tor. Installa/avvia Tor prima." >&2
+    fi
+    sed "s/@TOR_UID@/${uid}/g" "${KS}"
+}
+
+load_killswitch(){
+    need_root
+    [ -f "${KS}" ] || { echo "Ruleset non trovato: ${KS}" >&2; exit 1; }
+    # Validate first, then apply atomically.
+    render | nft -c -f - || { echo "Ruleset non valido, non applico." >&2; exit 1; }
+    render | nft -f -
+    echo "Kill-switch Tor ATTIVO (fail-closed). Tabella: inet ${TABLE}"
+}
+
+remove_killswitch(){
+    need_root
+    nft list table inet "${TABLE}" >/dev/null 2>&1 && nft delete table inet "${TABLE}"
+    echo "Kill-switch rimosso. Traffico diretto consentito (modalità standard)."
+}
+
+case "${1:-status}" in
+    status)
+        if nft list table inet "${TABLE}" >/dev/null 2>&1; then
+            echo "Profilo: kill-switch ATTIVO (Tor/Hardened)"
+        else
+            echo "Profilo: STANDARD (nessun kill-switch)"
+        fi
+        command -v systemctl >/dev/null && systemctl is-active --quiet tor 2>/dev/null \
+            && echo "tor: attivo" || echo "tor: non attivo"
+        ;;
+    standard|off) remove_killswitch ;;
+    tor)          load_killswitch ;;
+    hardened)
+        load_killswitch
+        need_root
+        # Extra restriction example: drop outbound to RFC1918 from userland so a
+        # misconfigured app cannot reach the LAN while "anonymous". Documented.
+        nft add rule inet "${TABLE}" output ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } \
+            meta skuid != "$(id -u "${TOR_USER}")" drop 2>/dev/null || true
+        echo "Profilo HARDENED applicato (restrizioni LAN aggiuntive)."
+        ;;
+    *) echo "Uso: privacy-mode {status|standard|tor|hardened|off}" >&2; exit 2 ;;
+esac

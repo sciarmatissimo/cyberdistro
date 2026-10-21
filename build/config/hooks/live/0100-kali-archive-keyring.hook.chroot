@@ -1,0 +1,28 @@
+#!/bin/sh
+# Install the Kali archive signing key so the pinned-low Kali source verifies.
+# Runs inside the chroot during `lb build`.
+set -e
+
+echo "I: installing Kali archive keyring"
+# Preferred: the official keyring package from Debian/Kali if available.
+if apt-get install -y --no-install-recommends kali-archive-keyring 2>/dev/null; then
+    # Normalize to the dearmored location our sources.list references.
+    if [ -f /usr/share/keyrings/kali-archive-keyring.gpg ]; then
+        :
+    elif [ -f /etc/apt/trusted.gpg.d/kali-archive-keyring.gpg ]; then
+        cp /etc/apt/trusted.gpg.d/kali-archive-keyring.gpg /usr/share/keyrings/kali-archive-keyring.gpg
+    fi
+else
+    echo "W: kali-archive-keyring package not available; fetching key by fingerprint"
+    # Fallback: fetch and dearmor the published key. The expected fingerprint is
+    # pinned so a wrong key fails the build rather than silently trusting it.
+    EXPECTED="827C8569F2518CC677FECA1AED65462EC8D5E4C5"
+    tmpkey=$(mktemp)
+    wget -qO "$tmpkey" https://archive.kali.org/archive-keyring.gpg
+    gpg --show-keys --with-fingerprint "$tmpkey" | grep -q "$EXPECTED" \
+        || { echo "E: Kali key fingerprint mismatch"; exit 1; }
+    cp "$tmpkey" /usr/share/keyrings/kali-archive-keyring.gpg
+    rm -f "$tmpkey"
+fi
+
+apt-get update

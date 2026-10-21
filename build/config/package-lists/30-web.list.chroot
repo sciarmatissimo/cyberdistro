@@ -1,0 +1,12 @@
+# 8.2 Web Application Security (authorized testing / learning)
+zaproxy
+nikto
+wafw00f
+whatweb
+wapiti
+dirb
+gobuster
+sqlmap
+# Deliberately vulnerable practice targets for OFFLINE learning (isolated lab):
+# installed/launched on demand by the Security Center lab module, not exposed.
+# (DVWA / Juice Shop are pulled as containers by the lab module, not baked in.)

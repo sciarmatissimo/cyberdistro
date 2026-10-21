@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Security Center
+Name[it]=Centro di Sicurezza
+GenericName=Security tools front-end
+Comment=Guided, safe-by-default front-end for authorized security tooling
+Comment[it]=Front-end guidato e sicuro per gli strumenti di sicurezza autorizzati
+Exec=python3 -m cyberdistro_sc.gui
+Icon=cyberdistro-security-center
+Terminal=false
+Categories=Security;System;Network;
+Keywords=security;pentest;forensics;privacy;tor;
+StartupNotify=true

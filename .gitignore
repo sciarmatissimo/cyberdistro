@@ -1,0 +1,32 @@
+# Build artifacts
+build/.build/
+build/cache/
+build/chroot/
+build/binary/
+build/*.iso
+build/*.log
+iso/*.iso
+*.img
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/lib/
+dist/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets must never be committed
+*.key
+*.pem
+secrets/

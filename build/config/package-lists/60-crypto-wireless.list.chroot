@@ -1,0 +1,13 @@
+# 8.6 Password Security & Cryptography (authorized audits only)
+john
+hashcat
+hashid
+openssl
+gnupg
+testssl.sh
+sslscan
+# 8.7 Wireless (capabilities detected at runtime; no promises on built-in NICs)
+aircrack-ng
+iw
+wireless-tools
+reaver

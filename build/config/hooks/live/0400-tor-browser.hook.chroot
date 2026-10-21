@@ -1,0 +1,33 @@
+#!/bin/sh
+# Fetch and GPG-verify the official Tor Browser, then stage it system-wide.
+# We do NOT modify Tor Browser internals (that would weaken fingerprint
+# resistance). We only place the official bundle and a launcher.
+set -e
+
+TBB_VERSION="${TBB_VERSION:-14.0.1}"
+ARCH="linux-x86_64"
+BASE="https://dist.torproject.org/torbrowser/${TBB_VERSION}"
+PKG="tor-browser-${ARCH}-${TBB_VERSION}.tar.xz"
+
+echo "I: fetching Tor Browser ${TBB_VERSION}"
+cd /tmp
+if ! wget -q "${BASE}/${PKG}" || ! wget -q "${BASE}/${PKG}.asc"; then
+    echo "W: could not download Tor Browser (no network?). It will be offered as"
+    echo "W: an on-first-run download by the Security Center instead. Documented."
+    exit 0
+fi
+
+# Import the Tor Browser Developers signing key and verify the signature.
+export GNUPGHOME=$(mktemp -d)
+gpg --auto-key-locate nodefault,wkd --locate-keys torbrowser@torproject.org \
+    || gpg --keyserver keyserver.ubuntu.com --recv-keys EF6E286DDA85EA2A4BA7DE684E2C6E8793298290
+if gpg --verify "${PKG}.asc" "${PKG}"; then
+    mkdir -p /opt/tor-browser
+    tar -xJf "${PKG}" -C /opt/tor-browser --strip-components=1
+    echo "I: Tor Browser verified and installed to /opt/tor-browser"
+else
+    echo "E: Tor Browser signature verification FAILED — refusing to bundle"
+    rm -f "${PKG}"
+    exit 1
+fi
+rm -rf "$GNUPGHOME" "${PKG}" "${PKG}.asc"

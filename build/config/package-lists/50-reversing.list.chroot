@@ -1,0 +1,17 @@
+# 8.5 Reverse Engineering & Malware Analysis (static-first, isolated)
+ghidra
+radare2
+rizin
+gdb
+gdb-multiarch
+strace
+ltrace
+binwalk
+foremost
+file
+xxd
+hexedit
+python3-capstone
+python3-unicorn
+clamav
+clamav-freshclam

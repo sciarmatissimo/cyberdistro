@@ -1,0 +1,16 @@
+# 8.4 Digital Forensics & Incident Response (repeatability, chain of custody)
+sleuthkit
+autopsy
+yara
+ewf-tools
+libewf-dev
+dc3dd
+dcfldd
+ddrescue
+hashdeep
+exiftool
+foremost
+scalpel
+bulk-extractor
+plaso
+# Volatility 3 is installed via pip in a hook (packaging lags); see hook 0300.

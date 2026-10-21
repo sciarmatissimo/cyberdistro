@@ -1,0 +1,16 @@
+[Unit]
+# CyberDistro Tor kill-switch — DISABLED by default. Enabled only when the user
+# selects a Tor/Hardened privacy profile via privacy-mode. Shipped, not enabled.
+Description=CyberDistro Tor kill-switch (fail-closed)
+After=tor.service
+Wants=tor.service
+ConditionPathExists=/etc/cyberdistro/privacy/killswitch.nft
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/privacy-mode tor
+ExecStop=/usr/bin/privacy-mode off
+
+[Install]
+WantedBy=multi-user.target

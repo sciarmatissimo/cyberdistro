@@ -1,0 +1,147 @@
+# CyberDistro tool catalog — organized by OPERATIONAL GOAL, not just by program.
+# Each entry documents, in plain language: what it does, when to use it, which
+# permissions it needs, how intrusive it is, and whether a guided wrapper exists.
+# `wrapper` points at a real module in cyberdistro_sc.tools when a safe guided
+# flow is implemented; otherwise the tool is launched in its original form.
+
+categories:
+  - id: network
+    title_it: "Sicurezza di rete"
+    title_en: "Network Security"
+    goal_it: "Inventariare, osservare e verificare la configurazione di reti autorizzate."
+    tools:
+      - id: nmap-inventory
+        name: "Inventario di rete (Nmap)"
+        executable: nmap
+        activity: active_light
+        needs_privilege: false
+        wrapper: cyberdistro_sc.tools.network_inventory
+        what_it_does_it: "Individua host attivi e porte/servizi aperti in un intervallo autorizzato."
+        when_it_it: "Quando devi sapere quali dispositivi e servizi esistono in una rete di cui sei responsabile."
+        permissions_it: "Richiede un progetto con proprietario e ambito autorizzato. Alcune scansioni avanzate richiedono privilegi di root."
+      - id: traffic-capture
+        name: "Cattura traffico (tshark/tcpdump)"
+        executable: tshark
+        activity: passive
+        needs_privilege: true
+        wrapper: null
+        what_it_does_it: "Registra il traffico di rete per analizzarlo."
+        when_it_it: "Per diagnosticare o analizzare il traffico su una rete di cui sei responsabile."
+        permissions_it: "Richiede privilegi per accedere all'interfaccia di rete."
+
+  - id: web
+    title_it: "Sicurezza applicazioni web"
+    title_en: "Web Application Security"
+    goal_it: "Analizzare e testare applicazioni web autorizzate; esercitarsi in laboratorio isolato."
+    tools:
+      - id: zap-baseline
+        name: "Scansione web guidata (OWASP ZAP)"
+        executable: zaproxy
+        activity: active_intrusive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Analizza un'applicazione web per problemi di configurazione e vulnerabilità comuni."
+        when_it_it: "Su applicazioni web di tua proprietà o per cui hai autorizzazione scritta."
+        permissions_it: "Progetto + ambito autorizzato obbligatori. Operazione attiva e potenzialmente invasiva: richiede conferma."
+
+  - id: forensics
+    title_it: "Analisi forense e risposta agli incidenti"
+    title_en: "Digital Forensics & IR"
+    goal_it: "Acquisire, verificare e analizzare evidenze con ripetibilità e tracciabilità."
+    tools:
+      - id: forensic-hash
+        name: "Hash e catena di custodia"
+        executable: sha256sum
+        activity: passive
+        needs_privilege: false
+        wrapper: cyberdistro_sc.tools.forensic_hash
+        what_it_does_it: "Calcola e verifica hash crittografici di file/immagini per provarne l'integrità."
+        when_it_it: "All'inizio e durante un'indagine, per dimostrare che un'evidenza non è stata alterata."
+        permissions_it: "Nessun privilegio speciale. Lavora su copie, non sugli originali."
+      - id: tsk-timeline
+        name: "Analisi filesystem (The Sleuth Kit)"
+        executable: fls
+        activity: passive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Esamina il filesystem di un'immagine forense (file, cancellati, timeline)."
+        when_it_it: "Per ricostruire cosa è successo su un dispositivo a partire da una copia."
+        permissions_it: "Lavora su immagini in sola lettura."
+      - id: volatility
+        name: "Analisi memoria (Volatility 3)"
+        executable: vol
+        activity: passive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Analizza un dump di memoria RAM per processi, connessioni, artefatti."
+        when_it_it: "Quando hai acquisito la RAM di un sistema sotto indagine."
+        permissions_it: "Lavora su dump acquisiti, non sul sistema vivo."
+
+  - id: reversing
+    title_it: "Reverse engineering e analisi malware"
+    title_en: "Reverse Engineering & Malware Analysis"
+    goal_it: "Analisi statica e isolata di binari sospetti, senza eseguirli."
+    tools:
+      - id: ghidra
+        name: "Decompilatore (Ghidra)"
+        executable: ghidra
+        activity: passive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Disassembla e decompila binari per comprenderne il funzionamento."
+        when_it_it: "Per analisi statica di un eseguibile sospetto, senza eseguirlo."
+        permissions_it: "Nessun privilegio. L'analisi è statica; il campione non viene eseguito."
+      - id: file-triage
+        name: "Triage statico di un file"
+        executable: file
+        activity: passive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Identifica tipo, stringhe ed entropia di un file sospetto senza eseguirlo."
+        when_it_it: "Come primo passo su un campione sconosciuto."
+        permissions_it: "Nessun privilegio. Nessuna esecuzione del campione."
+
+  - id: crypto
+    title_it: "Password e crittografia"
+    title_en: "Password Security & Cryptography"
+    goal_it: "Audit autorizzati di robustezza e verifica di configurazioni crittografiche."
+    tools:
+      - id: tls-check
+        name: "Verifica configurazione TLS (testssl)"
+        executable: testssl.sh
+        activity: active_light
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Controlla certificati, protocolli e cifrari di un servizio TLS."
+        when_it_it: "Per verificare la sicurezza della configurazione TLS di un tuo servizio."
+        permissions_it: "Progetto + ambito autorizzato. Operazione attiva leggera."
+
+  - id: wireless
+    title_it: "Sicurezza wireless"
+    title_en: "Wireless Security"
+    goal_it: "Verifica autorizzata di reti wireless proprie; rilevamento capacità hardware."
+    tools:
+      - id: wifi-capabilities
+        name: "Capacità adattatore Wi-Fi"
+        executable: iw
+        activity: passive
+        needs_privilege: false
+        wrapper: null
+        what_it_does_it: "Mostra le interfacce wireless e se supportano la monitor mode."
+        when_it_it: "Prima di qualsiasi attività wireless, per sapere cosa l'hardware consente."
+        permissions_it: "Nessun privilegio per la sola lettura delle capacità."
+
+  - id: privacy
+    title_it: "Privacy e anonimato"
+    title_en: "Privacy & Anonymity"
+    goal_it: "Navigazione via Tor, kill-switch, verifica DNS e percorso."
+    tools:
+      - id: privacy-status
+        name: "Stato privacy e Tor"
+        executable: tor
+        activity: passive
+        needs_privilege: false
+        wrapper: cyberdistro_sc.tools.privacy_status
+        what_it_does_it: "Mostra se Tor è attivo, lo stato del kill-switch e rileva possibili leak DNS."
+        when_it_it: "Prima di navigare in modalità anonima e per verificare le protezioni."
+        permissions_it: "Lettura di stato. Il cambio profilo privacy richiede conferma e privilegi."

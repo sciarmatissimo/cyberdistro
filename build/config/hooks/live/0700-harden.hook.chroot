@@ -1,0 +1,36 @@
+#!/bin/sh
+# Safe-by-default hardening of the live system.
+set -e
+echo "I: applying safe-by-default hardening"
+
+# No remote-access services listening by default.
+for svc in ssh sshd avahi-daemon cups cups-browsed rpcbind; do
+    systemctl disable "${svc}.service" 2>/dev/null || true
+    systemctl disable "${svc}.socket"  2>/dev/null || true
+done
+
+# Disable crash/telemetry reporters if present.
+for svc in whoopsie apport popularity-contest; do
+    systemctl disable "${svc}.service" 2>/dev/null || true
+done
+rm -f /etc/apt/apt.conf.d/*popularity* 2>/dev/null || true
+
+# Firewall default-deny inbound (firewalld public zone) — documented in docs.
+if command -v firewall-offline-cmd >/dev/null 2>&1; then
+    firewall-offline-cmd --set-default-zone=public || true
+fi
+
+# Live user: no passwordless root shell by default; sudo requires password.
+# (live-config sets the 'analyst' user; we keep sudo password-gated.)
+sed -i 's/^%sudo.*NOPASSWD.*$/# removed passwordless sudo (safe-by-default)/' \
+    /etc/sudoers 2>/dev/null || true
+
+# Reduce persistent logging by default (journald volatile); documented.
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/00-cyberdistro.conf <<'EOF'
+[Journal]
+Storage=volatile
+RuntimeMaxUse=64M
+EOF
+
+echo "I: hardening done"
