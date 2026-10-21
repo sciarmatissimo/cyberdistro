@@ -1,0 +1,61 @@
+name: CI
+
+# Fast checks on every push / PR: Security Center unit tests, shell syntax,
+# nftables kill-switch syntax, and SBOM generation. Does NOT build the ISO
+# (that is the heavy build-iso workflow). Mirrors tests/run-all.sh.
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          # System Python modules used by the core + SBOM generator, plus nft
+          # for the kill-switch syntax check (nft -c needs CAP_NET_ADMIN → sudo).
+          sudo apt-get install -y --no-install-recommends \
+            python3 python3-yaml python3-psutil python3-reportlab \
+            nftables shellcheck
+
+      - name: Shell static analysis (shellcheck, errors only)
+        run: |
+          shellcheck -S error \
+            privacy/bin/privacy-mode \
+            privacy/tests/*.sh \
+            privacy/persistence/*.sh \
+            build/build.sh \
+            release/*.sh \
+            tests/run-all.sh
+
+      - name: Run full test suite (needs root for nft -c)
+        run: sudo ./tests/run-all.sh
+
+      - name: Fix result ownership for upload
+        if: always()
+        run: sudo chown -R "$USER" tests sbom || true
+
+      - name: Upload test results + SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-results
+          path: |
+            tests/results/
+            sbom/cyberdistro.cdx.json
+          retention-days: 30

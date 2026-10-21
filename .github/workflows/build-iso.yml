@@ -1,0 +1,158 @@
+name: Build ISO
+
+# Builds the bootable CyberDistro ISO with live-build, inside a PRIVILEGED
+# Debian trixie container (live-build needs root + chroot/mount/loop).
+#
+# Triggers:
+#   * workflow_dispatch — manual, with options.
+#   * push of a tag matching v* — builds and attaches to a GitHub Release.
+#
+# Honest notes:
+#   * This is a long job (tens of minutes) and needs lots of disk; we free the
+#     runner first. Very large images may still exceed a hosted runner — use a
+#     larger/self-hosted runner then.
+#   * It needs network to deb.debian.org, http.kali.org, dist.torproject.org.
+#   * GitHub Release assets are capped at 2 GiB each. If the ISO is larger, it
+#     is still uploaded as a workflow ARTIFACT, and the Release gets the
+#     checksum + SBOM + notes with a clear note that the ISO is in the artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: "Full ISO build (false = validate live-build config only)"
+        type: boolean
+        default: true
+      tbb_version:
+        description: "Tor Browser version to bundle"
+        type: string
+        default: "14.0.1"
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # needed to create a Release on tags
+
+concurrency:
+  group: build-iso-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          echo "Before:"; df -h / | tail -1
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache \
+            "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}" || true
+          sudo docker image prune -af || true
+          echo "After:"; df -h / | tail -1
+
+      - name: Cache live-build package cache
+        uses: actions/cache@v4
+        with:
+          path: build/cache
+          key: lb-cache-${{ hashFiles('build/config/package-lists/*.list.chroot') }}
+          restore-keys: lb-cache-
+
+      - name: Validate live-build config only
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_build == 'false'
+        run: |
+          docker run --rm --privileged -v "$GITHUB_WORKSPACE":/work -w /work/build \
+            debian:trixie bash -euxo pipefail -c '
+              apt-get update
+              apt-get install -y --no-install-recommends live-build
+              lb config
+              echo "live-build config generated successfully:"
+              ls -la config/
+            '
+          echo "Config-only validation passed. No ISO built (full_build=false)."
+
+      - name: Build ISO (privileged Debian container)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.full_build != 'false'
+        env:
+          TBB_VERSION: ${{ github.event.inputs.tbb_version || '14.0.1' }}
+        run: |
+          docker run --rm --privileged \
+            -v "$GITHUB_WORKSPACE":/work -w /work \
+            -e TBB_VERSION="$TBB_VERSION" \
+            debian:trixie bash -euxo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                live-build debootstrap xorriso squashfs-tools mtools dosfstools \
+                grub-pc-bin grub-efi-amd64-bin python3 python3-pip \
+                wget gnupg ca-certificates sudo procps
+              cd build
+              ./build.sh
+            '
+
+      - name: Normalize file ownership
+        if: always()
+        run: sudo chown -R "$USER" "$GITHUB_WORKSPACE" || true
+
+      - name: Generate SBOM, checksum, manifest and notes
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.full_build != 'false'
+        run: |
+          python3 sbom/generate-sbom.py > sbom/cyberdistro.cdx.json
+          chmod +x release/make-release.sh
+          ./release/make-release.sh
+          echo "---- artifacts ----"
+          ls -lh iso/ || true
+          ls -lh release/ || true
+
+      - name: Upload ISO + checksums as workflow artifact
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.full_build != 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyberdistro-iso
+          path: |
+            iso/CyberDistro-PC-x86_64.iso
+            iso/CyberDistro-PC-x86_64.iso.sha256
+            sbom/cyberdistro.cdx.json
+            release/manifest-*.json
+            release/RELEASE-NOTES-*.md
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Create GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="$(cat VERSION)"
+          NOTES="release/RELEASE-NOTES-${VER}.md"
+          [ -f "$NOTES" ] || NOTES="$(ls release/RELEASE-NOTES-*.md | head -1)"
+          ISO="iso/CyberDistro-PC-x86_64.iso"
+
+          # GitHub release asset limit is 2 GiB per file.
+          ASSETS=( "iso/CyberDistro-PC-x86_64.iso.sha256" "sbom/cyberdistro.cdx.json" )
+          if [ -f "$ISO" ]; then
+            SIZE=$(stat -c%s "$ISO")
+            LIMIT=$((2*1024*1024*1024))
+            if [ "$SIZE" -le "$LIMIT" ]; then
+              ASSETS+=( "$ISO" )
+            else
+              echo "::warning::ISO ($SIZE bytes) exceeds the 2 GiB Release asset limit; attaching checksum+SBOM only. The ISO is available as the workflow artifact 'cyberdistro-iso'."
+              {
+                echo ""
+                echo "> ⚠️ L'immagine ISO supera il limite di 2 GiB per asset di Release ed è disponibile come **artifact** del workflow (\`cyberdistro-iso\`). Checksum e SBOM sono allegati qui per la verifica."
+              } >> "$NOTES"
+            fi
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" "${ASSETS[@]}" \
+            --title "CyberDistro ${GITHUB_REF_NAME}" \
+            --notes-file "$NOTES" \
+            --prerelease

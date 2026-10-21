@@ -58,6 +58,14 @@ sha256sum -c CyberDistro-PC-x86_64.iso.sha256
 ```
 Confronta l'hash anche con quello pubblicato in `release/` (quando firmato).
 
+## Build automatica (CI/CD)
+
+La ISO può essere costruita anche su **GitHub Actions** senza un host locale:
+workflow `.github/workflows/build-iso.yml` (dispatch manuale o su tag `v*`), che
+esegue `build.sh` in un container Debian trixie privilegiato. La CI veloce
+(`ci.yml`) esegue i test a ogni push/PR. Dettagli, opzioni e limiti in
+`.github/workflows/README.md`.
+
 ## Troubleshooting
 
 | Sintomo | Causa probabile | Rimedio |

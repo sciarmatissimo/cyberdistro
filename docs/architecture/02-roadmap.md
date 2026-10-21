@@ -44,6 +44,7 @@ i suoi test e non è un mockup.
 - [x] Suite test eseguibile localmente + risultati
 - [x] Tooling SHA-256 / manifest / note di rilascio
 - [x] Generatore SBOM (CycloneDX) + inventario licenze
+- [x] Pipeline CI/CD (GitHub Actions): test a ogni push + build ISO on-demand/tag
 - [ ] Test boot USB su hardware reale
 - [ ] Scansione dipendenze in CI su ISO reale
 - [ ] Firma ISO e pubblicazione
