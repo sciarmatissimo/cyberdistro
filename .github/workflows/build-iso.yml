@@ -59,12 +59,10 @@ jobs:
           sudo docker image prune -af || true
           echo "After:"; df -h / | tail -1
 
-      - name: Cache live-build package cache
-        uses: actions/cache@v4
-        with:
-          path: build/cache
-          key: lb-cache-${{ hashFiles('build/config/package-lists/*.list.chroot') }}
-          restore-keys: lb-cache-
+      # NOTE: no actions/cache for build/cache. Restoring live-build's cached
+      # bootstrap mangles /tmp permissions in the chroot, which breaks apt
+      # signature verification ("repository is not signed"). Fresh builds are
+      # slower but reliable.
 
       - name: Validate live-build config only
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_build == 'false'
