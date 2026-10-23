@@ -126,12 +126,13 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: Create GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish GitHub Release (on tag, or on manual full build)
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.full_build != 'false')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VER="$(cat VERSION)"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then TAG="${GITHUB_REF_NAME}"; else TAG="v${VER}"; fi
           NOTES="release/RELEASE-NOTES-${VER}.md"
           [ -f "$NOTES" ] || NOTES="$(ls release/RELEASE-NOTES-*.md | head -1)"
           ISO="iso/CyberDistro-PC-x86_64.iso"
@@ -152,7 +153,13 @@ jobs:
             fi
           fi
 
-          gh release create "${GITHUB_REF_NAME}" "${ASSETS[@]}" \
-            --title "CyberDistro ${GITHUB_REF_NAME}" \
-            --notes-file "$NOTES" \
-            --prerelease
+          # Idempotent: create the release (and its tag) if absent, else update assets.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --title "CyberDistro $TAG" \
+              --notes-file "$NOTES" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
