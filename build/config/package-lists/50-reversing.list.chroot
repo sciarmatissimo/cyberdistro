@@ -1,7 +1,5 @@
 # 8.5 Reverse Engineering & Malware Analysis (static-first, isolated)
-ghidra
-radare2
-rizin
+# ghidra, radare2 and rizin come from the Kali archive → hook 0600 (tolerant).
 gdb
 gdb-multiarch
 strace

@@ -1,28 +1,52 @@
 #!/bin/sh
-# Install the Kali archive signing key so the pinned-low Kali source verifies.
-# Runs inside the chroot during `lb build`.
+# Set up the Kali archive INSIDE the chroot so Kali-provided tools can be
+# installed by later hooks. This runs as a chroot hook; it writes the key, the
+# source and the pinning itself rather than relying on includes.chroot timing
+# (which is applied after the package-list install pass).
 set -e
 
-echo "I: installing Kali archive keyring"
-# Preferred: the official keyring package from Debian/Kali if available.
+echo "I: configuring Kali archive (key + source + pinning)"
+EXPECTED="827C8569F2518CC677FECA1AED65462EC8D5E4C5"
+
+# 1) Key → /usr/share/keyrings/kali-archive-keyring.gpg
 if apt-get install -y --no-install-recommends kali-archive-keyring 2>/dev/null; then
-    # Normalize to the dearmored location our sources.list references.
-    if [ -f /usr/share/keyrings/kali-archive-keyring.gpg ]; then
-        :
-    elif [ -f /etc/apt/trusted.gpg.d/kali-archive-keyring.gpg ]; then
-        cp /etc/apt/trusted.gpg.d/kali-archive-keyring.gpg /usr/share/keyrings/kali-archive-keyring.gpg
-    fi
-else
-    echo "W: kali-archive-keyring package not available; fetching key by fingerprint"
-    # Fallback: fetch and dearmor the published key. The expected fingerprint is
-    # pinned so a wrong key fails the build rather than silently trusting it.
-    EXPECTED="827C8569F2518CC677FECA1AED65462EC8D5E4C5"
+    [ -f /usr/share/keyrings/kali-archive-keyring.gpg ] || \
+    cp /etc/apt/trusted.gpg.d/kali-archive-keyring.gpg \
+       /usr/share/keyrings/kali-archive-keyring.gpg 2>/dev/null || true
+fi
+if [ ! -f /usr/share/keyrings/kali-archive-keyring.gpg ]; then
+    echo "I: fetching Kali key by fingerprint"
     tmpkey=$(mktemp)
-    wget -qO "$tmpkey" https://archive.kali.org/archive-keyring.gpg
-    gpg --show-keys --with-fingerprint "$tmpkey" | grep -q "$EXPECTED" \
-        || { echo "E: Kali key fingerprint mismatch"; exit 1; }
-    cp "$tmpkey" /usr/share/keyrings/kali-archive-keyring.gpg
+    if wget -qO "$tmpkey" https://archive.kali.org/archive-keyring.gpg; then
+        if gpg --show-keys --with-fingerprint "$tmpkey" | grep -q "$EXPECTED"; then
+            cp "$tmpkey" /usr/share/keyrings/kali-archive-keyring.gpg
+        else
+            echo "E: Kali key fingerprint mismatch"; rm -f "$tmpkey"; exit 1
+        fi
+    else
+        echo "W: could not fetch Kali key (no network?). Kali tools will be skipped."
+        rm -f "$tmpkey"
+        exit 0   # non-fatal: base Debian image still builds
+    fi
     rm -f "$tmpkey"
 fi
 
-apt-get update
+# 2) Source (pinned LOW via preferences below)
+mkdir -p /etc/apt/sources.list.d
+cat > /etc/apt/sources.list.d/kali.list <<'EOF'
+deb [signed-by=/usr/share/keyrings/kali-archive-keyring.gpg] http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware
+EOF
+
+# 3) Pinning: Debian stays the system of record (990), Kali installable (100)
+mkdir -p /etc/apt/preferences.d
+cat > /etc/apt/preferences.d/kali <<'EOF'
+Package: *
+Pin: release o=Debian
+Pin-Priority: 990
+
+Package: *
+Pin: release o=Kali
+Pin-Priority: 100
+EOF
+
+apt-get update || echo "W: apt-get update after adding Kali returned non-zero"

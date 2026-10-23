@@ -1,9 +1,8 @@
 # 8.2 Web Application Security (authorized testing / learning)
-zaproxy
+# zaproxy and wapiti come from the Kali archive → installed by hook 0600 (tolerant).
 nikto
 wafw00f
 whatweb
-wapiti
 dirb
 gobuster
 sqlmap

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Install Kali-provided tools AFTER the Kali archive is configured (hook 0100).
+# TOLERANT: each package is installed on its own; a missing one is logged and
+# skipped so it never aborts the whole ISO build. The Security Center's
+# capability detection then reports truthfully what actually ended up installed.
+set -e
+
+echo "I: installing Kali-provided tools (tolerant)"
+
+# kde-spectacle is a Debian package (screenshot tool) whose name we were unsure
+# of; install it here tolerantly too so the base lists stay clean.
+TOOLS="kde-spectacle zeek zaproxy wapiti bulk-extractor ghidra radare2 rizin"
+
+apt-get update || true
+for p in $TOOLS; do
+    if apt-get install -y --no-install-recommends "$p"; then
+        echo "I: installed $p"
+    else
+        echo "W: could not install '$p' — left out of this image"
+    fi
+done

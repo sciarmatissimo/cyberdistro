@@ -6,11 +6,11 @@ ewf-tools
 libewf-dev
 dc3dd
 dcfldd
-ddrescue
+gddrescue
 hashdeep
 exiftool
 foremost
 scalpel
-bulk-extractor
 plaso
+# bulk-extractor comes from the Kali archive → installed by hook 0600 (tolerant).
 # Volatility 3 is installed via pip in a hook (packaging lags); see hook 0300.

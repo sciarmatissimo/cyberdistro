@@ -3,7 +3,6 @@ nmap
 wireshark
 tshark
 tcpdump
-zeek
 whois
 dnsutils
 ldnsutils
