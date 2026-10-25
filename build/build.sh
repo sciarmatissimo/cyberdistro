@@ -44,7 +44,9 @@ install -D -m644 "$ROOT/privacy/nftables/killswitch.nft" \
 #     adds the Kali repo (lifecycle-managed) and Kali tools resolve during build.
 #     Official Kali key fingerprint (key ID ED444FF07D8D0BF6).
 KALI_KEY="config/archives/kali.key.chroot"
-KALI_FPR="44C6513A8E4FB3D30875F758ED444FF07D8D0BF6"
+# Current Kali archive signing key fingerprint (rotated in 2025; key ID
+# ED65462EC8D5E4C5). Verified against Kali's published announcement.
+KALI_FPR="827C8569F2518CC677FECA1AED65462EC8D5E4C5"
 if [ -f "config/archives/kali.list.chroot" ] && [ ! -s "$KALI_KEY" ]; then
     log "fetching + verifying Kali archive key"
     tmpk="$(mktemp)"
