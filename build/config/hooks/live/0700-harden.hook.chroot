@@ -33,4 +33,11 @@ Storage=volatile
 RuntimeMaxUse=64M
 EOF
 
+# Enable the live-user setup service (sets a known password + unlocks + sudo),
+# and make sure SDDM is the active display manager with autologin shipped under
+# /etc/sddm.conf.d/ (includes.chroot). Autologin lets the live session reach the
+# desktop without a password prompt.
+systemctl enable cyberdistro-liveuser.service 2>/dev/null || true
+systemctl enable sddm.service 2>/dev/null || true
+
 echo "I: hardening done"

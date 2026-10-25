@@ -46,6 +46,20 @@ richiede che l'utente dichiari un ambito autorizzato prima di procedere.
 Legenda: ✅ completo · 🟡 reale ma incompleto/non testato end-to-end · ❌ assente.
 Lo stato aggiornato e le limitazioni note sono in `docs/architecture/03-status.md`.
 
+## Primo avvio (login e credenziali)
+
+La sessione live entra **automaticamente** nel desktop (autologin), senza
+chiedere password. Le credenziali dell'utente live, necessarie per `sudo` e per
+un eventuale login manuale, sono:
+
+| Utente | Password |
+|--------|----------|
+| `analyst` | `cyberdistro` |
+
+La sessione predefinita è **Plasma (X11)** per la massima compatibilità; dopo il
+logout si può scegliere **Plasma (Wayland)** dal menu "Session" di SDDM.
+Con la persistenza cifrata attiva, cambia la password al primo accesso.
+
 ## Struttura del repository
 
 ```

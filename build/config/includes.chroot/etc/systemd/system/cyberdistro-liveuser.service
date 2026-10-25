@@ -1,0 +1,15 @@
+[Unit]
+Description=CyberDistro: set live user password and unlock (first boot)
+# Run after live-config has created the user (unit may not exist; harmless),
+# and before the display manager starts. Ordering only — never blocks boot.
+After=live-config.service systemd-user-sessions.service
+Before=display-manager.service sddm.service
+ConditionKernelCommandLine=boot=live
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/cyberdistro-liveuser.sh
+
+[Install]
+WantedBy=graphical.target
