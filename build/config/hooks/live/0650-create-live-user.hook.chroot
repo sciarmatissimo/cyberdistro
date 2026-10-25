@@ -1,0 +1,42 @@
+#!/bin/sh
+# Create the live user AT BUILD TIME so it always exists, independent of
+# live-config (whose service is not reliably enabled in this image). Without a
+# real user, SDDM shows an empty greeter and autologin has no target — which is
+# exactly the "stuck at login, no user list" symptom.
+#
+# This bakes analyst into /etc/passwd (verifiable in the built squashfs), sets a
+# known password, and grants the groups a desktop/security user needs.
+set -e
+
+U=analyst
+PW=cyberdistro
+
+echo "I: baking live user '${U}'"
+if ! id "$U" >/dev/null 2>&1; then
+    useradd -m -s /bin/bash -c "CyberDistro Analyst" "$U"
+fi
+echo "${U}:${PW}" | chpasswd
+passwd -u "$U" 2>/dev/null || true
+
+for g in sudo audio video netdev plugdev bluetooth cdrom dip users scanner lpadmin wireshark; do
+    getent group "$g" >/dev/null 2>&1 && usermod -aG "$g" "$U" 2>/dev/null || true
+done
+
+# Hostname (live-config would normally set this from the boot cmdline).
+echo cyberdistro > /etc/hostname
+grep -q '127.0.1.1[[:space:]]\+cyberdistro' /etc/hosts 2>/dev/null \
+    || echo "127.0.1.1 cyberdistro" >> /etc/hosts
+
+# Italian keyboard + it/en locales as sensible defaults (best-effort).
+if [ -f /etc/default/keyboard ]; then
+    sed -i 's/^XKBLAYOUT=.*/XKBLAYOUT="it"/' /etc/default/keyboard || true
+else
+    printf 'XKBLAYOUT="it"\nXKBMODEL="pc105"\n' > /etc/default/keyboard || true
+fi
+if [ -f /etc/locale.gen ]; then
+    sed -i 's/^# *\(it_IT.UTF-8 UTF-8\)/\1/; s/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen || true
+    locale-gen >/dev/null 2>&1 || true
+fi
+printf 'LANG=it_IT.UTF-8\n' > /etc/default/locale 2>/dev/null || true
+
+echo "I: live user '${U}' baked (password set, groups applied, hostname=cyberdistro)"
