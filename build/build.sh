@@ -40,6 +40,33 @@ cp -a "$ROOT/forensics"       "$STAGE/"
 install -D -m644 "$ROOT/privacy/nftables/killswitch.nft" \
     "config/includes.chroot/usr/share/cyberdistro/privacy/killswitch.nft"
 
+# 1b) Fetch + verify the Kali archive key into config/archives so live-build
+#     adds the Kali repo (lifecycle-managed) and Kali tools resolve during build.
+#     Official Kali key fingerprint (key ID ED444FF07D8D0BF6).
+KALI_KEY="config/archives/kali.key.chroot"
+KALI_FPR="44C6513A8E4FB3D30875F758ED444FF07D8D0BF6"
+if [ -f "config/archives/kali.list.chroot" ] && [ ! -s "$KALI_KEY" ]; then
+    log "fetching + verifying Kali archive key"
+    tmpk="$(mktemp)"
+    ok=no
+    for attempt in 1 2 3; do
+        if wget -qO "$tmpk" https://archive.kali.org/archive-keyring.gpg; then
+            fpr="$(gpg --show-keys --with-colons "$tmpk" 2>/dev/null \
+                   | awk -F: '/^fpr:/{print $10; exit}')"
+            if [ "$fpr" = "$KALI_FPR" ]; then ok=yes; break; fi
+            echo "W: Kali key fingerprint mismatch (got '${fpr:-none}') attempt $attempt"
+        else
+            echo "W: Kali key download failed, attempt $attempt"
+        fi
+    done
+    if [ "$ok" = yes ]; then
+        cp "$tmpk" "$KALI_KEY"; log "Kali key verified ($KALI_FPR)"
+    else
+        die "could not fetch/verify the Kali archive key (needed for Kali tools)."
+    fi
+    rm -f "$tmpk"
+fi
+
 # 2) Clean previous build state (keep caches unless --clean given).
 if [ "${1:-}" = "--clean" ]; then
     log "lb clean --purge"

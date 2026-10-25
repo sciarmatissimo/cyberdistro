@@ -28,5 +28,6 @@ dist/
 
 # Secrets must never be committed
 *.key
+build/config/archives/*.key.chroot
 *.pem
 secrets/

@@ -1,0 +1,17 @@
+# Wi-Fi / networking essentials.
+# IMPORTANT: the build uses --apt-recommends false, so packages normally pulled
+# as Recommends (wpasupplicant, regdb, firmware) must be listed EXPLICITLY, or
+# NetworkManager cannot operate Wi-Fi and the adapter looks "not recognized".
+wpasupplicant
+wireless-regdb
+rfkill
+iw
+wireless-tools
+# Broad Wi-Fi firmware coverage for common laptop chipsets (Intel/Atheros/
+# Realtek already listed in 00-system; add Broadcom and TI here).
+firmware-brcm80211
+firmware-iwlwifi
+firmware-atheros
+firmware-realtek
+firmware-ti-connectivity
+# ModemManager off by default is fine; NM handles Wi-Fi with wpasupplicant.

@@ -1,0 +1,26 @@
+#!/bin/sh
+# Install Kali-provided tools. The Kali archive is added by live-build from
+# config/archives/ (key verified at build time), so it is available for the
+# whole chroot stage, and live-build removes it cleanly afterwards.
+#
+# TOLERANT: each package installs on its own; a missing/broken one is logged and
+# skipped so it never aborts the ISO build. We use --install-recommends here
+# because the global build default is --apt-recommends false, and tools like
+# ghidra/zaproxy need their recommended runtime (e.g. a JRE) to actually work.
+set -e
+
+echo "I: installing Kali-provided tools"
+apt-get update || true
+
+# Reverse engineering, web, network, forensics tools from Kali.
+TOOLS="radare2 rizin ghidra zaproxy zeek wapiti bulk-extractor"
+
+for p in $TOOLS; do
+    if apt-get install -y --install-recommends "$p"; then
+        echo "I: installed $p"
+    else
+        echo "W: could not install '$p' — left out of this image"
+    fi
+done
+
+echo "I: Kali tools step done"

@@ -11,6 +11,7 @@ lb config noauto \
     --architectures amd64 \
     --linux-flavours amd64 \
     --archive-areas "main contrib non-free non-free-firmware" \
+    --compression xz \
     --debian-installer none \
     --bootloaders "grub-efi grub-pc" \
     --uefi-secure-boot disable \
