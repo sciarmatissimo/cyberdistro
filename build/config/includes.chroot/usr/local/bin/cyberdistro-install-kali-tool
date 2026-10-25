@@ -1,0 +1,47 @@
+#!/bin/sh
+# cyberdistro-install-kali-tool — add the Kali archive (key verified) and
+# install one or more Kali packages on demand. Used for the heavy tools that are
+# not pre-baked into the ISO (e.g. ghidra, zaproxy). Requires an internet
+# connection. Debian stays the system of record via APT pinning.
+#
+# Usage: cyberdistro-install-kali-tool ghidra [zaproxy ...]
+set -e
+
+if [ "$(id -u)" != 0 ]; then exec sudo "$0" "$@"; fi
+[ "$#" -ge 1 ] || { echo "Uso: cyberdistro-install-kali-tool <pacchetto> [...]"; exit 2; }
+
+KEY=/usr/share/keyrings/kali-archive-keyring.gpg
+FPR=827C8569F2518CC677FECA1AED65462EC8D5E4C5
+
+echo ">> Preparo il repository Kali (verificato) ..."
+if [ ! -s "$KEY" ]; then
+    tmp="$(mktemp)"
+    if ! wget -qO "$tmp" https://archive.kali.org/archive-keyring.gpg; then
+        echo "!! Download della chiave fallito. Sei connesso a Internet?"; rm -f "$tmp"; exit 1
+    fi
+    got="$(gpg --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '/^fpr:/{print $10; exit}')"
+    if [ "$got" != "$FPR" ]; then
+        echo "!! Impronta chiave Kali non valida ($got). Interrompo per sicurezza."; rm -f "$tmp"; exit 1
+    fi
+    install -m 0644 "$tmp" "$KEY"; rm -f "$tmp"
+    echo "   chiave Kali verificata e installata."
+fi
+
+cat > /etc/apt/sources.list.d/kali.list <<EOF
+deb [signed-by=${KEY}] http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware
+EOF
+cat > /etc/apt/preferences.d/kali <<EOF
+Package: *
+Pin: release o=Debian
+Pin-Priority: 990
+
+Package: *
+Pin: release o=Kali
+Pin-Priority: 100
+EOF
+
+echo ">> Aggiorno gli indici dei pacchetti ..."
+apt-get update
+echo ">> Installo: $* ..."
+apt-get install -y --install-recommends "$@"
+echo ">> Fatto. (Debian resta la base; i pacchetti Kali sono pinnati a priorità bassa.)"

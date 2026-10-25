@@ -12,8 +12,11 @@ set -e
 echo "I: installing Kali-provided tools"
 apt-get update || true
 
-# Reverse engineering, web, network, forensics tools from Kali.
-TOOLS="radare2 rizin ghidra zaproxy zeek wapiti bulk-extractor"
+# Light Kali tools baked into the image. The heavy, Java-based ones (ghidra,
+# zaproxy) are NOT baked — they would push the ISO over GitHub's 2 GiB release
+# limit — and are offered as a one-click on-demand install instead
+# (cyberdistro-install-kali-tool + desktop launchers).
+TOOLS="radare2 rizin zeek wapiti bulk-extractor"
 
 for p in $TOOLS; do
     if apt-get install -y --install-recommends "$p"; then

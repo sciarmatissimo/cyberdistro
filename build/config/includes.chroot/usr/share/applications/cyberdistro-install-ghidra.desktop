@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Install Ghidra (on-demand)
+Name[it]=Installa Ghidra (richiede Internet)
+Comment=Download and install the Ghidra reverse-engineering suite from Kali
+Comment[it]=Scarica e installa la suite di reverse engineering Ghidra da Kali
+Exec=konsole --hold -e sh -c 'sudo cyberdistro-install-kali-tool ghidra'
+Icon=cyberdistro-security-center
+Terminal=false
+Categories=Security;Development;
+Keywords=ghidra;reverse;engineering;kali;

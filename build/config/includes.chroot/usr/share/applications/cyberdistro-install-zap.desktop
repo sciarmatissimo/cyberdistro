@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Install OWASP ZAP (on-demand)
+Name[it]=Installa OWASP ZAP (richiede Internet)
+Comment=Download and install the OWASP ZAP web scanner from Kali
+Comment[it]=Scarica e installa lo scanner web OWASP ZAP da Kali
+Exec=konsole --hold -e sh -c 'sudo cyberdistro-install-kali-tool zaproxy'
+Icon=cyberdistro-security-center
+Terminal=false
+Categories=Security;Network;
+Keywords=zap;owasp;web;proxy;kali;
