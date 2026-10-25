@@ -62,7 +62,9 @@ if [ -f "config/archives/kali.list.chroot" ] && [ ! -s "$KALI_KEY" ]; then
         fi
     done
     if [ "$ok" = yes ]; then
-        cp "$tmpk" "$KALI_KEY"; log "Kali key verified ($KALI_FPR)"
+        cp "$tmpk" "$KALI_KEY"
+        chmod 0644 "$KALI_KEY"   # must be world-readable or gpgv (_apt) ignores it
+        log "Kali key verified ($KALI_FPR)"
     else
         die "could not fetch/verify the Kali archive key (needed for Kali tools)."
     fi
