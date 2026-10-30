@@ -1,16 +1,39 @@
 #!/bin/sh
-# Launch the bundled, GPG-verified Tor Browser (installed by the build hook
-# 0400 under /opt/tor-browser). If it was not bundled (download/verification
-# failed at build time), explain instead of failing silently.
-TB=/opt/tor-browser/Browser/start-tor-browser
-if [ -x "$TB" ]; then
-    exec "$TB" --detach "$@"
-fi
-MSG="Tor Browser non è incluso in questa immagine (download o verifica della firma non riusciti in fase di build).
+# Launch the bundled, GPG-verified Tor Browser.
+#
+# The build hook 0400 installs a pristine, read-only TEMPLATE under
+# /opt/tor-browser. Tor Browser needs a WRITABLE copy it owns (profile, state,
+# updates live inside its own directory), so on first launch we copy the
+# template into the user's data directory and start it from there. With
+# encrypted persistence the copy (and the Tor Browser profile) survive reboots;
+# in plain live mode it lives in RAM and disappears at shutdown.
+TEMPLATE=/opt/tor-browser
+DEST="${XDG_DATA_HOME:-$HOME/.local/share}/cyberdistro/tor-browser"
+TB="$DEST/Browser/start-tor-browser"
+
+fail() {
+    if command -v kdialog >/dev/null 2>&1; then
+        kdialog --title "Tor Browser" --sorry "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+    exit 1
+}
+
+if [ ! -x "$TEMPLATE/Browser/start-tor-browser" ]; then
+    fail "Tor Browser non è incluso in questa immagine (download o verifica della firma non riusciti in fase di build).
 Puoi scaricarlo e verificarlo da https://www.torproject.org/download/ oppure usare la modalità 'Anonimato Tor' del Security Center."
-if command -v kdialog >/dev/null 2>&1; then
-    kdialog --title "Tor Browser" --sorry "$MSG"
-else
-    printf '%s\n' "$MSG" >&2
 fi
-exit 1
+
+if [ ! -x "$TB" ]; then
+    mkdir -p "$(dirname "$DEST")" || fail "Impossibile creare $DEST"
+    # Copy, then make sure everything is owned/writable by the current user.
+    if ! cp -a "$TEMPLATE" "$DEST.tmp" 2>/dev/null; then
+        rm -rf "$DEST.tmp"
+        fail "Impossibile copiare Tor Browser in $DEST (spazio insufficiente?)."
+    fi
+    chmod -R u+rwX "$DEST.tmp"
+    mv "$DEST.tmp" "$DEST" || fail "Impossibile completare la copia di Tor Browser."
+fi
+
+exec "$TB" --detach "$@"

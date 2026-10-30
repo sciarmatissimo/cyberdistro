@@ -24,6 +24,13 @@
 - **Verifica**: 35 test unitari + smoke test GUI offscreen con screenshot
   (`tests/results/gui-screenshots/`), eseguiti anche in CI. Scansione reale
   della rete della sandbox di sviluppo eseguita con successo (self + gateway).
+- **Tor Browser**: la 0.2.0 lo include davvero (verificato nella squashfs). È
+  installato come template in `/opt/tor-browser` e copiato nella home
+  dell'utente al primo avvio dal launcher `cyberdistro-tor-browser` (Tor
+  Browser richiede una copia scrivibile di cui è proprietario). Con la
+  persistenza cifrata la copia e il profilo sopravvivono al riavvio.
+- **Dimensione ISO**: 2 036 080 640 byte, al 95% del limite di 2 GiB per asset
+  di Release GitHub. Il workflow già ripiega sull'artifact se superato.
 - **Non verificato**: avvio su hardware reale, resa del layout Plasma su display
   reale, Bluetooth su hardware (la sandbox non ha bluez/adattatore).
 

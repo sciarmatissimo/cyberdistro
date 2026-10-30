@@ -31,7 +31,12 @@ if gpg --verify "${PKG}.asc" "${PKG}" 2>/dev/null; then
     mkdir -p /opt/tor-browser
     if tar -xJf "${PKG}" -C /opt/tor-browser --strip-components=1 \
        && [ -x /opt/tor-browser/Browser/start-tor-browser ]; then
-        echo "I: Tor Browser verified and installed to /opt/tor-browser"
+        # The tarball is extracted by root with 0700 modes: make it world-
+        # readable so the live user can copy it into $HOME on first launch
+        # (Tor Browser must own a writable copy: it keeps its profile and
+        # updates inside its own directory; /opt stays a pristine template).
+        chmod -R a+rX /opt/tor-browser
+        echo "I: Tor Browser verified and installed to /opt/tor-browser (template)"
     else
         echo "W: Tor Browser extraction failed; NOT bundled (skipped)."
         rm -rf /opt/tor-browser
