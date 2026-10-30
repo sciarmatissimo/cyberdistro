@@ -15,7 +15,15 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 out_dir = sys.argv[1] if len(sys.argv) > 1 else "gui-shots"
 os.makedirs(out_dir, exist_ok=True)
 
-from PySide6 import QtCore, QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
+
+# Optional: render with a real icon theme (e.g. Papirus, as shipped in the ISO)
+# to check that the device icon names resolve: CYBERDISTRO_SMOKE_ICON_THEME=Papirus
+if os.environ.get("CYBERDISTRO_SMOKE_ICON_THEME"):
+    # The offscreen platform has no platform theme, so point Qt at the
+    # standard icon directories explicitly (Plasma does this for real sessions).
+    QtGui.QIcon.setThemeSearchPaths(["/usr/share/icons", os.path.expanduser("~/.local/share/icons")])
+    QtGui.QIcon.setThemeName(os.environ["CYBERDISTRO_SMOKE_ICON_THEME"])
 
 from cyberdistro_sc.gui.app import build_app  # noqa: E402
 from cyberdistro_sc.core.modes import Mode  # noqa: E402
@@ -141,5 +149,10 @@ labels = [win.nav.item(i).text() for i in range(win.nav.count())]
 assert "Strumenti" not in labels
 # device list survived the mode round-trip (mode never drops results)
 assert explore.net_grid.count() == len(explore.net_devices)
+
+if os.environ.get("CYBERDISTRO_SMOKE_ICON_THEME"):
+    from cyberdistro_sc.tools import explore as _ex
+    missing = [k for k in _ex.KINDS if not any(QtGui.QIcon.hasThemeIcon(n) for n in _ex.icon_candidates(k))]
+    print("[icons] theme:", QtGui.QIcon.themeName(), "kinds without a theme icon:", missing or "none")
 
 print("GUI SMOKE: OK")

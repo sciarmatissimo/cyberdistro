@@ -177,6 +177,13 @@ class TestClassifyAndVendor(unittest.TestCase):
         self.assertEqual(ex.classify("", ""), "unknown")
         self.assertEqual(ex.icon_for("phone"), "smartphone")
         self.assertEqual(ex.icon_for("nope"), ex.icon_for("unknown"))
+        # Papirus (shipped in the ISO) has "phone"/"network-modem", so they
+        # must be among the candidates; the primary name stays first.
+        self.assertEqual(ex.icon_candidates("phone")[0], "smartphone")
+        self.assertIn("phone", ex.icon_candidates("phone"))
+        self.assertIn("network-modem", ex.icon_candidates("router"))
+        for kind in ex.KINDS:
+            self.assertTrue(ex.icon_candidates(kind), kind)
 
     def test_lookup_vendor_with_db_and_random_mac(self):
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as fh:

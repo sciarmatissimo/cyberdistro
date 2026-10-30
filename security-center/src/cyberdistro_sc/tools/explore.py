@@ -67,8 +67,36 @@ KINDS: dict[str, tuple[str, str, str]] = {
 }
 
 
+# Alternative theme icon names per kind, in order of preference. Verified
+# against the Papirus set shipped in the ISO (64x64/devices): e.g. Papirus has
+# "phone" and "network-modem" but no "smartphone"/"network-wireless-router".
+ICON_ALTERNATES: dict[str, list[str]] = {
+    "self":     ["computer-laptop", "computer"],
+    "router":   ["network-wireless-router", "network-modem", "network-server"],
+    "computer": ["computer", "computer-laptop"],
+    "phone":    ["smartphone", "phone", "tablet"],
+    "printer":  ["printer", "printer-network"],
+    "tv":       ["video-television", "tv"],
+    "camera":   ["camera-web", "camera-video", "camera-photo"],
+    "audio":    ["audio-headphones", "audio-speakers", "audio-card"],
+    "input":    ["input-keyboard", "input-mouse"],
+    "wearable": ["smartwatch", "preferences-desktop-user", "phone"],
+    "iot":      ["network-wired", "network-card"],
+    "unknown":  ["network-workgroup", "network-card", "network-wired"],
+}
+
+
 def icon_for(kind: str) -> str:
     return KINDS.get(kind, KINDS["unknown"])[0]
+
+
+def icon_candidates(kind: str) -> list[str]:
+    """Theme icon names to try, most specific first (GUI falls back to a glyph)."""
+    names = list(ICON_ALTERNATES.get(kind, []))
+    primary = icon_for(kind)
+    if primary not in names:
+        names.insert(0, primary)
+    return names
 
 
 def label_for(kind: str, lang: str = "it") -> str:

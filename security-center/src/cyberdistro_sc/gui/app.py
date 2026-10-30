@@ -91,9 +91,9 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
 
     # ------------------------------------------------------------ helpers
     def kind_icon(kind: str, size: int = 64) -> "QtGui.QIcon":
-        icon = QtGui.QIcon.fromTheme(ex.icon_for(kind))
-        if not icon.isNull():
-            return icon
+        for name in ex.icon_candidates(kind):
+            if QtGui.QIcon.hasThemeIcon(name):
+                return QtGui.QIcon.fromTheme(name)
         pm = QtGui.QPixmap(size, size)
         pm.fill(QtCore.Qt.transparent)
         p = QtGui.QPainter(pm)
@@ -512,7 +512,7 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
                 ("network-wireless", "📡", "Esplora la rete",
                  "Scopri chi è collegato al tuo Wi‑Fi e quali dispositivi Bluetooth hai intorno.",
                  lambda: self.win.go("explore")),
-                ("torbrowser", "🧅", "Naviga anonimo",
+                ("tor", "🧅", "Naviga anonimo",
                  "Apri Tor Browser e controlla lo stato della tua privacy.",
                  lambda: self.win.go("privacy")),
                 ("document-encrypt", "🔏", "Verifica un file",

@@ -3,7 +3,7 @@
   "specVersion": "1.5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-30T18:06:51.203621+00:00",
+    "timestamp": "2026-10-30T18:47:25.128964+00:00",
     "component": {
       "type": "operating-system",
       "name": "CyberDistro",
@@ -956,6 +956,13 @@
       "version": "resolved-at-build",
       "group": "os-packages/privacy",
       "purl": "pkg:deb/debian/iproute2"
+    },
+    {
+      "type": "library",
+      "name": "xz-utils",
+      "version": "resolved-at-build",
+      "group": "os-packages/privacy",
+      "purl": "pkg:deb/debian/xz-utils"
     },
     {
       "type": "library",
