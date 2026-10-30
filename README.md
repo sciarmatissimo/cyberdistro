@@ -5,11 +5,33 @@
 > con un'esperienza desktop curata e strumenti professionali resi comprensibili
 > anche a chi non è esperto.
 
-**Stato del progetto: ALPHA in sviluppo. Nessuna release pubblica.**
+**Stato del progetto: ALPHA (pre-release).**
 Questo repository contiene il sistema di build, l'applicazione Security Center,
 le configurazioni di privacy/persistenza, i test, la documentazione e gli
-strumenti di rilascio. **Non** contiene un file ISO pre-generato: la ISO si
-ottiene eseguendo la build su un host Debian (vedi `build/README.md`).
+strumenti di rilascio. Il codice sorgente **non** include la ISO: l'immagine
+viene generata dal workflow `Build ISO` (GitHub Actions) e pubblicata nelle
+**Release**, oppure si ottiene eseguendo la build su un host Debian (vedi
+`build/README.md`).
+
+## Scaricare la ISO
+
+La ISO della **PC Edition (x86-64)** è allegata all'ultima pre-release:
+
+➡️ **https://github.com/sciarmatissimo/cyberdistro/releases/latest**
+
+Scarica `CyberDistro-PC-x86_64.iso` (~1,9 GB) insieme a
+`CyberDistro-PC-x86_64.iso.sha256`, poi verifica l'integrità **prima** di
+scrivere la chiavetta:
+
+```bash
+sha256sum -c CyberDistro-PC-x86_64.iso.sha256
+# atteso: CyberDistro-PC-x86_64.iso: OK
+```
+
+L'hash di riferimento è anche riportato nelle note della release. Scrittura su
+USB e avvio: `docs/beginner/guida-principianti.md` (§3). Secure Boot va disattivato (immagine non
+firmata in alpha). Non usare "Download ZIP" del repository: contiene solo i
+sorgenti, non la ISO.
 
 ---
 

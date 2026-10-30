@@ -151,9 +151,13 @@ jobs:
             fi
           fi
 
-          # Idempotent: create the release (and its tag) if absent, else update assets.
+          # Idempotent: create the release (and its tag) if absent, else update
+          # assets AND notes. The notes carry the SHA-256/size of the ISO, so
+          # they must be refreshed whenever the asset is replaced (--clobber);
+          # otherwise the published hash no longer matches the download.
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
+            gh release edit "$TAG" --notes-file "$NOTES"
           else
             gh release create "$TAG" "${ASSETS[@]}" \
               --title "CyberDistro $TAG" \

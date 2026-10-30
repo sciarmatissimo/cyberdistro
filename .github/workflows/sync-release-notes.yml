@@ -1,0 +1,85 @@
+name: Sync release notes
+
+# Rigenera le note di una Release esistente a partire dagli asset REALMENTE
+# caricati (file .sha256 + dimensione dall'API), senza ricostruire la ISO.
+# Serve quando gli asset sono stati sostituiti (--clobber) e le note riportano
+# ancora hash/dimensione di una build precedente.
+#
+# Uso: Actions → "Sync release notes" → Run workflow → tag (es. v0.1.0-alpha)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag della release da aggiornare"
+        type: string
+        required: true
+        default: "v0.1.0-alpha"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rigenera le note dagli asset pubblicati
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ISO_NAME="CyberDistro-PC-x86_64.iso"
+          VER="$(cat VERSION)"
+
+          # Dimensione e stato dell'asset ISO dall'API (nessun download da 2 GB)
+          SIZE="$(gh api "repos/$REPO/releases/tags/$TAG" \
+                  --jq ".assets[] | select(.name==\"$ISO_NAME\") | .size")"
+          [ -n "$SIZE" ] || { echo "::error::asset $ISO_NAME non trovato nella release $TAG"; exit 1; }
+
+          # Hash dal file .sha256 allegato (pochi byte)
+          gh release download "$TAG" --pattern "$ISO_NAME.sha256" --clobber
+          HASH="$(awk '{print $1}' "$ISO_NAME.sha256")"
+          [ "${#HASH}" -eq 64 ] || { echo "::error::hash non valido in $ISO_NAME.sha256"; exit 1; }
+
+          # Run che ha prodotto l'asset (data di aggiornamento dell'asset)
+          UPDATED="$(gh api "repos/$REPO/releases/tags/$TAG" \
+                     --jq ".assets[] | select(.name==\"$ISO_NAME\") | .updated_at")"
+
+          cat > NOTES.md <<EOF
+          # CyberDistro ${VER} — Release notes
+
+          **File:** \`${ISO_NAME}\` (PC Edition, x86-64, live USB, UEFI + BIOS)
+          **SHA-256:** \`${HASH}\`
+          **Dimensione:** ${SIZE} byte
+          **Asset aggiornato:** ${UPDATED}
+
+          ## Verifica integrità
+          Scarica la ISO e il file \`.sha256\` nella stessa cartella, poi:
+          \`\`\`bash
+          sha256sum -c ${ISO_NAME}.sha256
+          # atteso: ${ISO_NAME}: OK
+          \`\`\`
+          L'hash deve coincidere con quello riportato qui sopra. Se non coincide,
+          il download è incompleto o corrotto: riscaricalo.
+
+          ## Avvio
+          Scrivi la ISO su una chiavetta USB (≥ 16 GB) con balenaEtcher o \`dd\`,
+          avvia dal menu di boot del PC e **disattiva Secure Boot** (immagine non
+          firmata in alpha). Istruzioni: \`docs/beginner/guida-principianti.md\`.
+
+          ## Stato
+          Release **ALPHA**. Vedi \`docs/architecture/03-status.md\` per funzionalità
+          verificate, non verificate e limitazioni note. Solo PC Edition x86-64:
+          le immagini Mac Intel / Apple Silicon non sono ancora pubblicate.
+
+          _Note sincronizzate automaticamente con gli asset pubblicati._
+          EOF
+
+          gh release edit "$TAG" --notes-file NOTES.md
+          echo "Note aggiornate per $TAG: sha256=$HASH size=$SIZE"
