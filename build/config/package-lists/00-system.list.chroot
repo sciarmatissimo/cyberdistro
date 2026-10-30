@@ -47,3 +47,9 @@ orca
 # --- Localization (it + en) ---
 task-italian
 locales
+# X11 window manager for the default Plasma X11 session (plasma-workspace only
+# pulls kwin-wayland; without kwin-x11 the X11 session has no window manager).
+kwin-x11
+# --- Bluetooth (stack + Plasma applet/pairing UI; used by Security Center "Esplora") ---
+bluez
+bluedevil

@@ -10,5 +10,17 @@ install -D -m644 /usr/share/cyberdistro/privacy/killswitch.nft \
     /etc/cyberdistro/privacy/killswitch.nft 2>/dev/null || \
     echo "W: killswitch.nft not staged; privacy CLI will install it on first use"
 
+# Privacy CLI (explicit, privileged profile switch used by the Security Center
+# through pkexec) + verification scripts, on PATH.
+for f in privacy-mode check-dns-leak.sh check-tor-path.sh; do
+    if [ -f "/usr/share/cyberdistro/privacy/$f" ]; then
+        install -m755 "/usr/share/cyberdistro/privacy/$f" "/usr/local/sbin/$f"
+        echo "I: installed /usr/local/sbin/$f"
+    else
+        echo "W: /usr/share/cyberdistro/privacy/$f not staged"
+    fi
+done
+[ -x /usr/local/sbin/privacy-mode ] || { echo "E: privacy-mode CLI missing"; exit 1; }
+
 # systemd unit is shipped under includes.chroot; ensure it is NOT enabled.
 systemctl disable cyberdistro-killswitch.service 2>/dev/null || true

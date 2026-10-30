@@ -26,7 +26,7 @@ on:
       tbb_version:
         description: "Tor Browser version to bundle"
         type: string
-        default: "14.0.1"
+        default: "15.0.26"
   push:
     tags:
       - 'v*'
@@ -80,7 +80,7 @@ jobs:
       - name: Build ISO (privileged Debian container)
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.full_build != 'false'
         env:
-          TBB_VERSION: ${{ github.event.inputs.tbb_version || '14.0.1' }}
+          TBB_VERSION: ${{ github.event.inputs.tbb_version || '15.0.26' }}
         run: |
           docker run --rm --privileged \
             -v "$GITHUB_WORKSPACE":/work -w /work \

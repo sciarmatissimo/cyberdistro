@@ -31,3 +31,9 @@ dist/
 build/config/archives/*.key.chroot
 *.pem
 secrets/
+
+# Staged at build time by build/build.sh (copied from the repo tree)
+build/config/includes.chroot/opt/cyberdistro-src/
+build/config/includes.chroot/usr/share/cyberdistro/
+build/config/includes.chroot/usr/share/plasma/
+security-center/build/

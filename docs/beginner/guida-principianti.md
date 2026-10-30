@@ -31,28 +31,48 @@ ricordarti la responsabilità. **Non** è un permesso legale: quello devi averlo
 - Scegli **Live** per una sessione temporanea (niente viene salvato).
 - Scegli **persistence** se hai creato la memoria cifrata (ti chiede la password).
 - Arrivi a un desktop pulito, in stile moderno: in alto la barra di stato
-  (rete, privacy, batteria), in basso il dock con le app, al centro la ricerca.
+  (menu, orologio, rete, Bluetooth, batteria), in basso la barra delle
+  applicazioni con: menu, **Impostazioni di sistema**, **Security Center**, File,
+  Terminale, Tor Browser.
 
 ## 5. Apri il Security Center
-È l'app con lo scudo. Da qui:
-- **Panoramica**: lo stato del sistema e della privacy.
-- **Strumenti**: elenco per obiettivo (rete, web, forense, ecc.). Ogni strumento
-  spiega *cosa fa*, *quando usarlo* e *quali permessi servono*.
-- Lascia la modalità su **Principiante**: ti guida passo-passo con scelte sicure.
+È l'icona con lo scudo nella **barra in basso a sinistra, subito a destra delle
+Impostazioni di sistema**. In modalità **Principiante** (quella iniziale) il menu
+a sinistra è ridotto all'essenziale:
+- **Esplora**: chi c'è sulla tua rete Wi‑Fi e quali dispositivi Bluetooth hai intorno.
+- **Panoramica**: quattro grandi pulsanti (Esplora la rete, Naviga anonimo,
+  Verifica un file, Impara) e lo stato di rete/Tor/Bluetooth a colpo d'occhio.
+- **Privacy**: modalità Standard / Anonimato Tor / Rafforzata e Tor Browser.
+- **Impara**: cosa fa ogni strumento, in parole semplici.
 
-## 6. La tua prima operazione: inventario della tua rete di casa
-Obiettivo: scoprire quali dispositivi sono collegati alla **tua** rete.
-1. Security Center → **Progetti** → *Nuovo progetto*. Dai un nome (es. "Casa
-   mia"), indica te stesso come proprietario e inserisci l'intervallo della tua
-   rete (il Security Center lo rileva e te lo propone, es. `192.168.1.0/24`).
-2. Vai su **Strumenti → Inventario di rete** e premi **Mostra comando** per
-   vedere esattamente cosa verrà eseguito (trasparenza totale).
-3. Premi **Esegui**. Vedrai l'avanzamento e poi un elenco chiaro di dispositivi e
-   servizi, con spiegazioni.
-4. Premi **Esporta report** per avere un PDF/HTML/JSON ordinato.
+Le voci avanzate (Strumenti, Progetti, Report) compaiono passando a
+**Professionista** o **Esperto** dal selettore in basso a sinistra. Il cambio è
+reversibile e non cancella nulla.
 
-Se provi un bersaglio **fuori** dal tuo intervallo autorizzato, il sistema ti
-**blocca**: è voluto.
+## 6. La tua prima operazione: Esplora la tua rete
+Obiettivo: vedere quali dispositivi sono collegati alla **tua** rete.
+1. Security Center → **Esplora** (scheda *Rete Wi‑Fi / cablata*). La tua rete è
+   già selezionata (es. `Wi‑Fi «CasaMia» — 192.168.1.0/24`).
+2. Premi **Cerca dispositivi**. Ti viene chiesto di confermare che è la tua rete
+   (o che sei autorizzato a osservarla): spunta la casella e conferma.
+3. Dopo qualche secondo compaiono i dispositivi come **icone**: il tuo computer,
+   il router, telefoni, stampanti, TV, dispositivi «smart»… Se un tipo non è
+   riconoscibile viene mostrato come dispositivo generico (non viene inventato).
+4. **Clicca su un'icona** per i dettagli: indirizzo IP, indirizzo fisico (MAC),
+   produttore, nome, se è il router, con una spiegazione in italiano.
+5. Scheda **Bluetooth** → **Cerca dispositivi**: ascolta per alcuni secondi i
+   dispositivi vicini (cuffie, telefoni, smartwatch…) e li mostra allo stesso modo.
+   Non si connette e non accoppia nulla.
+
+Cosa succede davvero: per la rete viene eseguito un controllo di presenza
+(`nmap -sn`) **solo** sulla rete a cui sei connesso — non puoi inserire altri
+bersagli qui; per il Bluetooth si usa `bluetoothctl` in sola lettura. In modalità
+Professionista/Esperto il comando esatto è mostrato nella finestra dei dettagli.
+
+Vuoi sapere *quali servizi* espone un dispositivo? Passa a **Professionista**,
+crea un **Progetto** con il tuo intervallo autorizzato e usa **Strumenti →
+Inventario di rete (Nmap)**. Se provi un bersaglio **fuori** dall'ambito
+autorizzato, il sistema ti **blocca**: è voluto.
 
 ## 7. Navigare in modo anonimo
 - Barra di stato → icona privacy → scegli **Anonimato Tor**.

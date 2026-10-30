@@ -31,7 +31,8 @@ jobs:
           # for the kill-switch syntax check (nft -c needs CAP_NET_ADMIN → sudo).
           sudo apt-get install -y --no-install-recommends \
             python3 python3-yaml python3-psutil python3-reportlab \
-            nftables shellcheck
+            python3-pyside6.qtwidgets python3-pyside6.qtgui python3-pyside6.qtcore \
+            nmap iproute2 nftables shellcheck
 
       - name: Shell static analysis (shellcheck, errors only)
         run: |

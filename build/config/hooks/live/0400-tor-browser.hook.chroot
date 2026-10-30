@@ -6,7 +6,7 @@
 # Center can offer Tor Browser as a verified first-run download.
 set -u
 
-TBB_VERSION="${TBB_VERSION:-14.0.1}"
+TBB_VERSION="${TBB_VERSION:-15.0.26}"
 ARCH="linux-x86_64"
 BASE="https://dist.torproject.org/torbrowser/${TBB_VERSION}"
 PKG="tor-browser-${ARCH}-${TBB_VERSION}.tar.xz"

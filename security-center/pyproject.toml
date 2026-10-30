@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cyberdistro-security-center"
-version = "0.1.0"
+version = "0.2.0"
 description = "CyberDistro Security Center — guided, safe-by-default front-end for authorized security tooling"
 readme = "README.md"
 requires-python = ">=3.11"

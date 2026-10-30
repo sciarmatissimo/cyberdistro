@@ -10,6 +10,15 @@ categories:
     title_en: "Network Security"
     goal_it: "Inventariare, osservare e verificare la configurazione di reti autorizzate."
     tools:
+      - id: explore
+        name: "Esplora (chi c'è sulla rete / Bluetooth)"
+        executable: nmap
+        activity: active_light
+        needs_privilege: false
+        wrapper: cyberdistro_sc.tools.explore
+        what_it_does_it: "Mostra in modo visuale i dispositivi presenti sulla rete Wi‑Fi/cablata a cui sei connesso e quelli Bluetooth nelle vicinanze, con icona e dettagli al clic."
+        when_it_it: "Quando vuoi sapere chi è collegato alla tua rete di casa/ufficio o quali dispositivi Bluetooth ti circondano. Pensato per chi inizia."
+        permissions_it: "Solo la rete locale a cui sei connesso e di cui dichiari di essere proprietario o autorizzato. Nessun privilegio di root; il Bluetooth è solo in ascolto."
       - id: nmap-inventory
         name: "Inventario di rete (Nmap)"
         executable: nmap

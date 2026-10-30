@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Id": "org.cyberdistro.desktop",
+        "Name": "CyberDistro",
+        "Description": "CyberDistro desktop layout: top status bar, bottom application bar with Security Center next to System Settings.",
+        "Description[it]": "Layout desktop CyberDistro: barra di stato in alto, barra applicazioni in basso con il Security Center accanto alle Impostazioni di sistema.",
+        "Authors": [
+            {
+                "Name": "CyberDistro project contributors"
+            }
+        ],
+        "License": "GPL-3.0-or-later",
+        "Version": "0.2.0",
+        "Website": "https://github.com/sciarmatissimo/cyberdistro"
+    },
+    "X-Plasma-MainScript": "defaults"
+}

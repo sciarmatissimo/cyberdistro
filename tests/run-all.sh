@@ -15,10 +15,22 @@ echo "[1/4] Security Center unit tests"
 ( cd "$ROOT/security-center" && PYTHONPATH=src python3 -m unittest discover -s tests ) \
     && echo "  PASS" || { echo "  FAIL"; fail=1; }
 
+echo "[1b/4] Security Center GUI smoke test (offscreen; skipped without PySide6)"
+if python3 -c "import PySide6" 2>/dev/null; then
+    ( cd "$ROOT/security-center" && QT_QPA_PLATFORM=offscreen PYTHONPATH=src \
+        CYBERDISTRO_SMOKE_NO_SCAN="${CYBERDISTRO_SMOKE_NO_SCAN:-1}" \
+        timeout 300 python3 tests/gui_smoke.py "$ROOT/tests/results/gui-screenshots" 2>&1 \
+        | grep -vE "^qt\.qpa|propagateSizeHints|fontconfig" | tail -20 ) \
+        && echo "  PASS (screenshot in tests/results/gui-screenshots/)" || { echo "  FAIL"; fail=1; }
+else
+    echo "  SKIP (PySide6 non disponibile)"
+fi
+
 echo "[2/4] Shell script syntax (bash -n)"
 for f in "$ROOT"/privacy/bin/privacy-mode "$ROOT"/privacy/tests/*.sh \
          "$ROOT"/privacy/persistence/*.sh "$ROOT"/build/build.sh \
-         "$ROOT"/release/*.sh; do
+         "$ROOT"/release/*.sh "$ROOT"/build/config/hooks/live/*.hook.chroot \
+         "$ROOT"/build/config/includes.chroot/usr/local/bin/*; do
     bash -n "$f" && echo "  OK   ${f#$ROOT/}" || { echo "  FAIL ${f#$ROOT/}"; fail=1; }
 done
 

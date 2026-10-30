@@ -1,0 +1,29 @@
+#!/bin/sh
+# Verify the CyberDistro desktop layout is wired up: the look-and-feel package
+# is present, it is selected system-wide, and every launcher pinned in the
+# bottom bar resolves to a real .desktop file. Fails the build on a broken
+# reference (a dangling launcher would silently show nothing in the panel).
+set -e
+LNF=/usr/share/plasma/look-and-feel/org.cyberdistro.desktop
+LAYOUT="$LNF/contents/layouts/org.kde.plasma.desktop-layout.js"
+
+[ -f "$LNF/metadata.json" ] || { echo "E: look-and-feel package missing at $LNF"; exit 1; }
+[ -f "$LAYOUT" ] || { echo "E: panel layout missing at $LAYOUT"; exit 1; }
+grep -q 'LookAndFeelPackage=org.cyberdistro.desktop' /etc/xdg/kdeglobals \
+    || { echo "E: /etc/xdg/kdeglobals does not select org.cyberdistro.desktop"; exit 1; }
+
+# Every "applications:<id>.desktop" launcher must exist.
+fail=0
+for id in $(grep -o 'applications:[A-Za-z0-9_.-]*\.desktop' "$LAYOUT" | sed 's/^applications://' | sort -u); do
+    if [ -f "/usr/share/applications/$id" ]; then
+        echo "I: launcher ok: $id"
+    else
+        echo "E: launcher missing: /usr/share/applications/$id"; fail=1
+    fi
+done
+[ "$fail" -eq 0 ] || exit 1
+
+# Make sure the desktop database knows the new entries.
+command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q || true
+chmod 0755 /usr/local/bin/cyberdistro-tor-browser 2>/dev/null || true
+echo "I: desktop layout verified (Security Center pinned next to System Settings)"

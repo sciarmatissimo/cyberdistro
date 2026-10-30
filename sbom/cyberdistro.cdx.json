@@ -3,11 +3,11 @@
   "specVersion": "1.5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-21T20:14:16.699743+00:00",
+    "timestamp": "2026-10-30T18:06:51.203621+00:00",
     "component": {
       "type": "operating-system",
       "name": "CyberDistro",
-      "version": "0.1.0-alpha"
+      "version": "0.2.0-alpha"
     },
     "tools": [
       {
@@ -21,7 +21,7 @@
     {
       "type": "application",
       "name": "cyberdistro-security-center",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "group": "cyberdistro",
       "purl": "pkg:deb/debian/cyberdistro-security-center",
       "licenses": [
@@ -93,21 +93,21 @@
       "type": "library",
       "name": "firmware-iwlwifi",
       "version": "resolved-at-build",
-      "group": "os-packages/system",
+      "group": "os-packages/wifi",
       "purl": "pkg:deb/debian/firmware-iwlwifi"
     },
     {
       "type": "library",
       "name": "firmware-realtek",
       "version": "resolved-at-build",
-      "group": "os-packages/system",
+      "group": "os-packages/wifi",
       "purl": "pkg:deb/debian/firmware-realtek"
     },
     {
       "type": "library",
       "name": "firmware-atheros",
       "version": "resolved-at-build",
-      "group": "os-packages/system",
+      "group": "os-packages/wifi",
       "purl": "pkg:deb/debian/firmware-atheros"
     },
     {
@@ -207,13 +207,6 @@
       "version": "resolved-at-build",
       "group": "os-packages/system",
       "purl": "pkg:deb/debian/ark"
-    },
-    {
-      "type": "library",
-      "name": "spectacle",
-      "version": "resolved-at-build",
-      "group": "os-packages/system",
-      "purl": "pkg:deb/debian/spectacle"
     },
     {
       "type": "library",
@@ -333,6 +326,27 @@
       "version": "resolved-at-build",
       "group": "os-packages/system",
       "purl": "pkg:deb/debian/locales"
+    },
+    {
+      "type": "library",
+      "name": "kwin-x11",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/kwin-x11"
+    },
+    {
+      "type": "library",
+      "name": "bluez",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/bluez"
+    },
+    {
+      "type": "library",
+      "name": "bluedevil",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/bluedevil"
     },
     {
       "type": "library",
@@ -462,20 +476,6 @@
     },
     {
       "type": "library",
-      "name": "zeek",
-      "version": "resolved-at-build",
-      "group": "os-packages/network",
-      "purl": "pkg:deb/debian/zeek",
-      "licenses": [
-        {
-          "license": {
-            "name": "BSD-3-Clause"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "whois",
       "version": "resolved-at-build",
       "group": "os-packages/network",
@@ -532,20 +532,6 @@
     },
     {
       "type": "library",
-      "name": "zaproxy",
-      "version": "resolved-at-build",
-      "group": "os-packages/web",
-      "purl": "pkg:deb/debian/zaproxy",
-      "licenses": [
-        {
-          "license": {
-            "name": "Apache-2.0"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "nikto",
       "version": "resolved-at-build",
       "group": "os-packages/web",
@@ -571,13 +557,6 @@
       "version": "resolved-at-build",
       "group": "os-packages/web",
       "purl": "pkg:deb/debian/whatweb"
-    },
-    {
-      "type": "library",
-      "name": "wapiti",
-      "version": "resolved-at-build",
-      "group": "os-packages/web",
-      "purl": "pkg:deb/debian/wapiti"
     },
     {
       "type": "library",
@@ -672,10 +651,10 @@
     },
     {
       "type": "library",
-      "name": "ddrescue",
+      "name": "gddrescue",
       "version": "resolved-at-build",
       "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/ddrescue"
+      "purl": "pkg:deb/debian/gddrescue"
     },
     {
       "type": "library",
@@ -714,59 +693,10 @@
     },
     {
       "type": "library",
-      "name": "bulk-extractor",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/bulk-extractor"
-    },
-    {
-      "type": "library",
       "name": "plaso",
       "version": "resolved-at-build",
       "group": "os-packages/forensics",
       "purl": "pkg:deb/debian/plaso"
-    },
-    {
-      "type": "library",
-      "name": "ghidra",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/ghidra",
-      "licenses": [
-        {
-          "license": {
-            "name": "Apache-2.0"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "radare2",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/radare2",
-      "licenses": [
-        {
-          "license": {
-            "name": "LGPL-3.0-only"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "rizin",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/rizin",
-      "licenses": [
-        {
-          "license": {
-            "name": "LGPL-3.0-only"
-          }
-        }
-      ]
     },
     {
       "type": "library",
@@ -968,14 +898,14 @@
       "type": "library",
       "name": "iw",
       "version": "resolved-at-build",
-      "group": "os-packages/crypto-wireless",
+      "group": "os-packages/wifi",
       "purl": "pkg:deb/debian/iw"
     },
     {
       "type": "library",
       "name": "wireless-tools",
       "version": "resolved-at-build",
-      "group": "os-packages/crypto-wireless",
+      "group": "os-packages/wifi",
       "purl": "pkg:deb/debian/wireless-tools"
     },
     {
@@ -1026,6 +956,41 @@
       "version": "resolved-at-build",
       "group": "os-packages/privacy",
       "purl": "pkg:deb/debian/iproute2"
+    },
+    {
+      "type": "library",
+      "name": "wpasupplicant",
+      "version": "resolved-at-build",
+      "group": "os-packages/wifi",
+      "purl": "pkg:deb/debian/wpasupplicant"
+    },
+    {
+      "type": "library",
+      "name": "wireless-regdb",
+      "version": "resolved-at-build",
+      "group": "os-packages/wifi",
+      "purl": "pkg:deb/debian/wireless-regdb"
+    },
+    {
+      "type": "library",
+      "name": "rfkill",
+      "version": "resolved-at-build",
+      "group": "os-packages/wifi",
+      "purl": "pkg:deb/debian/rfkill"
+    },
+    {
+      "type": "library",
+      "name": "firmware-brcm80211",
+      "version": "resolved-at-build",
+      "group": "os-packages/wifi",
+      "purl": "pkg:deb/debian/firmware-brcm80211"
+    },
+    {
+      "type": "library",
+      "name": "firmware-ti-connectivity",
+      "version": "resolved-at-build",
+      "group": "os-packages/wifi",
+      "purl": "pkg:deb/debian/firmware-ti-connectivity"
     },
     {
       "type": "application",

@@ -58,8 +58,8 @@ richiede che l'utente dichiari un ambito autorizzato prima di procedere.
 | Fase | Contenuto | Stato in questo repo |
 |------|-----------|----------------------|
 | 1 | Ricerca e architettura | ✅ documentata |
-| 2 | Prototipo avviabile (build system) | 🟡 config completa, build da eseguire su host |
-| 3 | Security Center (core + GUI + modalità) | 🟡 core funzionante e testato; GUI scheletro |
+| 2 | Prototipo avviabile (build system) | 🟡 ISO generata in CI e pubblicata nelle Release; boot su hardware da verificare |
+| 3 | Security Center (core + GUI + modalità) | 🟡 core testato (35 test); GUI con **Esplora** visuale, modalità Principiante a tile, smoke test offscreen |
 | 4 | Privacy (Tor, kill-switch, DNS) | 🟡 ruleset e verifiche reali; integrazione da testare su ISO |
 | 5 | Persistenza cifrata (LUKS2) | 🟡 script reali; da testare end-to-end su hardware/VM |
 | 6 | Strumenti professionali (wrapper) | 🟡 wrapper reali per inventario/forense/privacy |

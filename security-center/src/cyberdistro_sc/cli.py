@@ -150,6 +150,59 @@ def cmd_run(args) -> int:
     return 2
 
 
+def cmd_explore(args) -> int:
+    """Beginner discovery: local network devices or nearby Bluetooth devices."""
+    from .tools import explore as ex
+    if args.what == "networks":
+        _print([n.to_dict() for n in ex.local_networks()])
+        return 0
+    if args.what == "network":
+        nets = ex.local_networks()
+        if not nets:
+            print("Nessuna rete locale attiva (IPv4) trovata.", file=sys.stderr)
+            return 2
+        net = nets[0]
+        if args.interface:
+            match = [n for n in nets if n.interface == args.interface]
+            if not match:
+                print(f"interfaccia {args.interface!r} non trovata tra: "
+                      f"{', '.join(n.interface for n in nets)}", file=sys.stderr)
+                return 2
+            net = match[0]
+        plan = ex.plan_network_scan(net.cidr)
+        print(f"[rete] {net.title} → {net.cidr}"
+              + (" (ridotta a /24)" if net.capped else ""), file=sys.stderr)
+        print(f"[comando] {plan.shell_preview}", file=sys.stderr)
+        if not args.yes:
+            print("Conferma che questa è la tua rete (o che sei autorizzato a "
+                  "osservarla) ripetendo il comando con --yes.", file=sys.stderr)
+            return 3
+        auth = ex.local_authorization(net, owner=os.environ.get("USER", "utente"),
+                                      confirmed=True)
+        try:
+            plan, proc, devices = ex.scan_network(net, auth)
+        except AuthorizationError as e:
+            print(f"BLOCCATO (safe-by-default): {e}", file=sys.stderr)
+            return 4
+        out = {"network": net.to_dict(), "command": plan.shell_preview,
+               "returncode": proc.returncode,
+               "devices": [d.to_dict() for d in devices]}
+        if proc.returncode == 127:
+            out["note"] = "nmap non è installato su questo sistema."
+        _print(out)
+        return 0 if proc.returncode == 0 else 1
+    if args.what == "bluetooth":
+        plan, devices, err = ex.scan_bluetooth(seconds=args.seconds)
+        print(f"[comando] {plan.shell_preview}", file=sys.stderr)
+        out = {"command": plan.shell_preview,
+               "devices": [d.to_dict() for d in devices]}
+        if err:
+            out["note"] = err
+        _print(out)
+        return 0 if not err else 2
+    return 2
+
+
 def cmd_report(args) -> int:
     proj = Project.load(args.base, args.project)
     if args.format == "json":
@@ -201,6 +254,16 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--dry-run", action="store_true", help="mostra il comando senza eseguirlo")
     pr.add_argument("--yes", action="store_true", help="conferma operazioni invasive")
     pr.set_defaults(func=cmd_run)
+
+    px = sub.add_parser("explore", help="(principianti) chi c'è sulla rete / Bluetooth")
+    px.add_argument("what", choices=["networks", "network", "bluetooth"],
+                    help="networks: elenca reti locali; network: dispositivi sulla "
+                         "rete locale; bluetooth: dispositivi vicini")
+    px.add_argument("--interface", help="interfaccia di rete da esplorare")
+    px.add_argument("--seconds", type=int, default=8, help="durata ascolto Bluetooth")
+    px.add_argument("--yes", action="store_true",
+                    help="confermo: è la mia rete o sono autorizzato a osservarla")
+    px.set_defaults(func=cmd_explore)
 
     prep = sub.add_parser("report", help="genera un report")
     prep.add_argument("project")

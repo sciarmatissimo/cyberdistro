@@ -88,7 +88,7 @@ def main() -> int:
     # First-party component
     components.append(component(
         "cyberdistro-security-center", "cyberdistro", "GPL-3.0-or-later",
-        version="0.1.0", extra={"description": "First-party Security Center"}))
+        version=open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "VERSION")).read().strip().split("-")[0], extra={"description": "First-party Security Center"}))
 
     # Debian/Kali packages
     for name, cat in pkgs.items():

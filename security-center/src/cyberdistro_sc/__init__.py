@@ -6,5 +6,5 @@ The package is split into a GUI-free ``core`` (importable and testable without
 any display or Qt) and a ``gui`` layer that only presents what the core exposes.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = ["__version__"]

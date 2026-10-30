@@ -1,5 +1,33 @@
 # 03 — Stato puntuale e limitazioni note
 
+## Novità 0.2.0-alpha (2026-10-30)
+- **Desktop**: look-and-feel Plasma `org.cyberdistro.desktop` (`desktop/look-and-feel/`)
+  selezionato da `/etc/xdg/kdeglobals`. Barra inferiore: menu → **Impostazioni di
+  sistema** → **Security Center** → File → Terminale → Tor Browser; barra superiore
+  con menu globale, vassoio di sistema e orologio. L'hook `0250-desktop-layout`
+  fa fallire la build se un launcher pinnato non esiste. Aggiunti `kwin-x11`
+  (la sessione X11 predefinita non aveva un window manager garantito), `bluez`,
+  `bluedevil`.
+- **Security Center — «Esplora»** (`tools/explore.py`, voce nel menu a sinistra):
+  rilevamento visuale dei dispositivi sulla rete locale (nmap `-sn` + tabella
+  neighbour + OUI → tipo/icona) e Bluetooth (`bluetoothctl`, sola lettura). Ogni
+  dispositivo è una tile cliccabile con finestra dettagli. Limitato alle reti a
+  cui il computer è connesso, con conferma esplicita dell'utente; prefissi più
+  larghi di /24 vengono ridotti. 13 test unitari su parser e gating.
+- **Modalità Principiante** ridisegnata: menu ridotto (Esplora, Panoramica,
+  Privacy, Impara), Panoramica a grandi pulsanti con stato rete/Tor/Bluetooth;
+  Professionista/Esperto mostrano tutto e i comandi eseguiti. Cambio reversibile.
+- **Privacy**: la CLI `privacy-mode` ora è **installata** nell'immagine
+  (`/usr/local/sbin`, prima mancava) e richiamabile via pkexec dalla GUI;
+  launcher `cyberdistro-tor-browser`. Default Tor Browser **15.0.26** (la 14.0.1
+  non è più su dist.torproject.org, quindi la 0.1.0 non lo includeva).
+- **Verifica**: 35 test unitari + smoke test GUI offscreen con screenshot
+  (`tests/results/gui-screenshots/`), eseguiti anche in CI. Scansione reale
+  della rete della sandbox di sviluppo eseguita con successo (self + gateway).
+- **Non verificato**: avvio su hardware reale, resa del layout Plasma su display
+  reale, Bluetooth su hardware (la sandbox non ha bluez/adattatore).
+
+
 Confronto onesto con la "Definizione di completamento" del capitolato (§18) e con
 gli output obbligatori (§4). **Legenda:** ✅ fatto/verificato qui · 🟡 implementato
 ma non verificabile in questo ambiente · ⛔ non ancora fatto.

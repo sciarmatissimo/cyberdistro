@@ -19,8 +19,13 @@ Le configurazioni di Plasma, SDDM e tema sono applicate nell'immagine tramite:
 - pacchetti: `build/config/package-lists/00-system.list.chroot`
 - file di skel/sistema: `build/config/includes.chroot/` (es. `/etc/skel` per i
   default del profilo utente `analyst`)
-- un hook di tematizzazione (roadmap `0600-desktop-theme.hook.chroot`) che imposta
-  layout del pannello, dock, tema chiaro/scuro e icone.
+- **look-and-feel `org.cyberdistro.desktop`** (`desktop/look-and-feel/`): layout
+  dei pannelli (`contents/layouts/org.kde.plasma.desktop-layout.js`) e default di
+  tema/icone (`contents/defaults`). È selezionato per tutti gli utenti da
+  `/etc/xdg/kdeglobals` (`LookAndFeelPackage=`), così plasmashell lo applica al
+  primo avvio. Barra inferiore: menu → Impostazioni di sistema → **Security
+  Center** → File → Terminale → Tor Browser. L'hook `0250-desktop-layout`
+  verifica che ogni launcher esista.
 
 ## Accessibilità
 - Lettore schermo **Orca**, scaling, contrasto elevato (temi Plasma), scorciatoie.
@@ -31,5 +36,5 @@ Le configurazioni di Plasma, SDDM e tema sono applicate nell'immagine tramite:
   pronta per altre lingue (file YAML per lingua).
 
 ## Stato
-Configurato a livello di package-list/includes. **Non avviato** in questo
-ambiente (nessun display). Verifica visiva e del layout: Fase 2 su VM/hardware.
+Configurato (package-list, includes, look-and-feel). **Non avviato** in questo
+ambiente (nessun display): la resa del layout va verificata su VM/hardware.

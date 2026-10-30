@@ -1,0 +1,12 @@
+[KDE]
+# Default look-and-feel for every new user: selects the CyberDistro panel layout
+# (desktop/look-and-feel/org.cyberdistro.desktop) on first plasmashell start.
+LookAndFeelPackage=org.cyberdistro.desktop
+SingleClick=false
+widgetStyle=Breeze
+
+[General]
+ColorScheme=BreezeLight
+
+[Icons]
+Theme=Papirus

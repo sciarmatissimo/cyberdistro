@@ -36,9 +36,22 @@ mkdir -p "$STAGE"
 cp -a "$ROOT/security-center" "$STAGE/"
 cp -a "$ROOT/privacy"         "$STAGE/"
 cp -a "$ROOT/forensics"       "$STAGE/"
-# Also ship privacy ruleset at a stable runtime path.
+# Also ship privacy ruleset + CLI at a stable runtime path (hook 0500 installs
+# the CLI into /usr/local/sbin; the Security Center invokes it via pkexec).
 install -D -m644 "$ROOT/privacy/nftables/killswitch.nft" \
     "config/includes.chroot/usr/share/cyberdistro/privacy/killswitch.nft"
+install -D -m755 "$ROOT/privacy/bin/privacy-mode" \
+    "config/includes.chroot/usr/share/cyberdistro/privacy/privacy-mode"
+install -D -m755 "$ROOT/privacy/tests/check-dns-leak.sh" \
+    "config/includes.chroot/usr/share/cyberdistro/privacy/check-dns-leak.sh"
+install -D -m755 "$ROOT/privacy/tests/check-tor-path.sh" \
+    "config/includes.chroot/usr/share/cyberdistro/privacy/check-tor-path.sh"
+# Desktop: Plasma look-and-feel package (panel layout with Security Center
+# next to System Settings, theme defaults). Selected by /etc/xdg/kdeglobals.
+LNF_DST="config/includes.chroot/usr/share/plasma/look-and-feel"
+rm -rf "$LNF_DST/org.cyberdistro.desktop"
+mkdir -p "$LNF_DST"
+cp -a "$ROOT/desktop/look-and-feel/org.cyberdistro.desktop" "$LNF_DST/"
 
 # 1b) Fetch + verify the Kali archive key into config/archives so live-build
 #     adds the Kali repo (lifecycle-managed) and Kali tools resolve during build.

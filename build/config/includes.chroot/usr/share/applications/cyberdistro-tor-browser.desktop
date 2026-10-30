@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Tor Browser
+GenericName=Anonymous web browser
+Comment=Browse the web anonymously through the Tor network
+Comment[it]=Naviga sul web in modo anonimo attraverso la rete Tor
+Exec=/usr/local/bin/cyberdistro-tor-browser
+Icon=torbrowser
+Terminal=false
+Categories=Network;WebBrowser;Security;
+Keywords=tor;anonymous;privacy;browser;
+StartupNotify=true

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Launch the bundled, GPG-verified Tor Browser (installed by the build hook
+# 0400 under /opt/tor-browser). If it was not bundled (download/verification
+# failed at build time), explain instead of failing silently.
+TB=/opt/tor-browser/Browser/start-tor-browser
+if [ -x "$TB" ]; then
+    exec "$TB" --detach "$@"
+fi
+MSG="Tor Browser non è incluso in questa immagine (download o verifica della firma non riusciti in fase di build).
+Puoi scaricarlo e verificarlo da https://www.torproject.org/download/ oppure usare la modalità 'Anonimato Tor' del Security Center."
+if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Tor Browser" --sorry "$MSG"
+else
+    printf '%s\n' "$MSG" >&2
+fi
+exit 1
