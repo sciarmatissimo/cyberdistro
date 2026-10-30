@@ -7,3 +7,5 @@ nyx
 # Firewall/kill-switch tooling:
 nftables
 iproute2
+# Needed by hook 0400 to extract the Tor Browser tarball (.tar.xz) in the chroot.
+xz-utils

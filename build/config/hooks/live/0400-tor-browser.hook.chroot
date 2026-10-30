@@ -27,9 +27,14 @@ if ! gpg --auto-key-locate nodefault,wkd --locate-keys torbrowser@torproject.org
 fi
 
 if gpg --verify "${PKG}.asc" "${PKG}" 2>/dev/null; then
+    command -v xz >/dev/null 2>&1 || apt-get install -y --no-install-recommends xz-utils >/dev/null 2>&1 || true
     mkdir -p /opt/tor-browser
-    if tar -xJf "${PKG}" -C /opt/tor-browser --strip-components=1; then
+    if tar -xJf "${PKG}" -C /opt/tor-browser --strip-components=1 \
+       && [ -x /opt/tor-browser/Browser/start-tor-browser ]; then
         echo "I: Tor Browser verified and installed to /opt/tor-browser"
+    else
+        echo "W: Tor Browser extraction failed; NOT bundled (skipped)."
+        rm -rf /opt/tor-browser
     fi
 else
     echo "W: Tor Browser signature check failed; NOT bundled (skipped)."

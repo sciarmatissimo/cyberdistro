@@ -156,12 +156,35 @@ jobs:
           # they must be refreshed whenever the asset is replaced (--clobber);
           # otherwise the published hash no longer matches the download.
           if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists: replacing assets and refreshing notes"
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
             gh release edit "$TAG" --notes-file "$NOTES"
           else
-            gh release create "$TAG" "${ASSETS[@]}" \
-              --title "CyberDistro $TAG" \
-              --notes-file "$NOTES" \
-              --prerelease \
-              --target "$GITHUB_SHA"
+            # 1) Make the tag exist first (plain git push with the job token), so
+            #    the release API does not have to create it implicitly.
+            if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+              git config user.name  "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag -a "$TAG" -m "CyberDistro $TAG" "$GITHUB_SHA"
+              git push origin "refs/tags/$TAG"
+              echo "Tag $TAG pushed"
+            fi
+            # 2) Create the release through the REST API with the full error
+            #    body on failure (gh's one-line 403 hides the real reason).
+            python3 - "$TAG" "$NOTES" > release.json <<'PY'
+          import json, sys
+          tag, notes = sys.argv[1], open(sys.argv[2], encoding="utf-8").read()
+          print(json.dumps({"tag_name": tag, "name": f"CyberDistro {tag}",
+                            "prerelease": True, "draft": False, "body": notes}))
+          PY
+            if ! RESP="$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" --input release.json 2>&1)"; then
+              echo "::error::Release creation failed. API response follows."
+              echo "$RESP"
+              echo "::notice::The ISO is still available as the workflow artifact 'cyberdistro-iso' (this run)."
+              echo "::notice::If the response says 'Resource not accessible by integration', check Settings → Actions → General → Workflow permissions (Read and write), then re-run."
+              exit 1
+            fi
+            echo "Release created: $(echo "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["html_url"])')"
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           fi
+          gh release view "$TAG" --json tagName,isPrerelease,assets --jq '{tag:.tagName,prerelease:.isPrerelease,assets:[.assets[].name]}'
