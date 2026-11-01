@@ -174,7 +174,8 @@ sections:
         name: "Debugger (GDB)"
         package: gdb gdb-multiarch
         source: debian
-        binary: gdb
+        binary: gdb-multiarch   # gdb stesso è già presente (lo usa KDE); la parte
+                                # multi-architettura è ciò che questa app aggiunge
         gui: false
         launch: terminal
         desc_it: "Il debugger: esegue un programma passo-passo, con breakpoint e ispezione di memoria e registri. Include il supporto multi-architettura (ARM, MIPS…)."
