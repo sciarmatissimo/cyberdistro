@@ -1,0 +1,220 @@
+# CyberDistro — on-demand application catalog.
+#
+# These applications are NOT pre-installed in the ISO. The user picks what to
+# install from the Security Center (sections "Forense e acquisizione" and
+# "Debug e analisi binaria"), which keeps the image small. Each entry is a real,
+# installable package verified against the live system's archives:
+#   source: debian  -> apt-get install (Debian trixie, the system base)
+#   source: kali    -> add the pinned Kali archive, then apt-get install
+#   source: pip     -> pip install (packaging lags in Debian)
+#
+# launch:
+#   gui       -> run the binary directly (graphical app)
+#   gui-root  -> run via pkexec (graphical app that needs root, e.g. disk imaging)
+#   web       -> run in a terminal; the tool prints a local URL to open
+#   terminal  -> open in Konsole (command-line tool / wizard)
+#
+# gui: true marks beginner-friendly graphical tools (shown first).
+
+sections:
+  - id: forensics
+    title_it: "Forense e acquisizione"
+    icon: "drive-harddisk"
+    intro_it: >
+      Copia i dischi in modo forense (senza alterarli), verifica che la copia sia
+      identica, recupera file cancellati e ricostruisci cosa è successo. Regola
+      d'oro: lavora sempre su una COPIA, mai sul dispositivo originale.
+    apps:
+      - id: guymager
+        name: "Guymager"
+        package: guymager
+        source: debian
+        binary: guymager
+        gui: true
+        launch: gui-root
+        desc_it: "Crea l'immagine forense di un disco o di una chiavetta con pochi clic."
+        use_it: "Hai una USB o un disco da analizzare: Guymager ne fa una copia esatta (E01 o raw) calcolando l'hash, con una finestra grafica semplice. È il punto di partenza di quasi ogni analisi."
+      - id: gnome-disks
+        name: "Dischi (GNOME Disks)"
+        package: gnome-disk-utility
+        source: debian
+        binary: gnome-disks
+        gui: true
+        launch: gui
+        desc_it: "Gestore dischi grafico: vedi i dispositivi, crea o ripristina immagini, controlla lo stato (SMART)."
+        use_it: "Per guardare quali dischi e partizioni ci sono, salvare l'immagine di una chiavetta o controllare la salute di un disco, senza usare il terminale."
+      - id: autopsy
+        name: "Autopsy"
+        package: autopsy
+        source: debian
+        binary: autopsy
+        gui: true
+        launch: web
+        desc_it: "Interfaccia grafica (nel browser) per analizzare un'immagine disco: file, cancellati, timeline, parole chiave."
+        use_it: "Dopo aver creato l'immagine con Guymager, apri Autopsy per sfogliare il contenuto, ritrovare file cancellati e cercare parole chiave come faresti con un esplora file."
+      - id: testdisk
+        name: "TestDisk / PhotoRec"
+        package: testdisk
+        source: debian
+        binary: photorec
+        gui: false
+        launch: terminal
+        desc_it: "Recupera partizioni perse e file cancellati con una procedura a menu guidata."
+        use_it: "Hai cancellato per errore foto o documenti, o una chiavetta non si apre più: PhotoRec li recupera seguendo un menu passo-passo."
+      - id: ewf-tools
+        name: "Strumenti E01 (libewf)"
+        package: ewf-tools
+        source: debian
+        binary: ewfacquire
+        gui: false
+        launch: terminal
+        desc_it: "Acquisisce ed esamina immagini nel formato forense standard E01 (con metadati del caso e hash)."
+        use_it: "Quando l'immagine deve finire in una perizia: 'ewfacquire' chiede numero reperto, operatore e note e produce un file E01 verificabile."
+      - id: imaging-cli
+        name: "Copia forense da terminale (dc3dd · dcfldd · ddrescue)"
+        package: dc3dd dcfldd gddrescue
+        source: debian
+        binary: dc3dd
+        gui: false
+        launch: terminal
+        desc_it: "Copia bit-a-bit da riga di comando: dc3dd/dcfldd con hash integrato, ddrescue per supporti danneggiati."
+        use_it: "Per il massimo controllo, o quando un disco è danneggiato: ddrescue salva tutto il leggibile saltando i settori rotti e può riprendere dove si era fermato."
+      - id: carving
+        name: "Recupero file (foremost · scalpel)"
+        package: foremost scalpel
+        source: debian
+        binary: foremost
+        gui: false
+        launch: terminal
+        desc_it: "File carving: ritrova file (JPEG, PDF, ZIP…) nei dati grezzi anche senza filesystem."
+        use_it: "Su un'immagine di una scheda formattata, 'foremost -t jpg,pdf -i img -o out/' ricostruisce foto e documenti cancellati divisi per tipo."
+      - id: plaso
+        name: "Timeline forense (Plaso)"
+        package: plaso
+        source: debian
+        binary: log2timeline.py
+        gui: false
+        launch: terminal
+        desc_it: "Costruisce una super-timeline: ordina cronologicamente migliaia di eventi (file, log, cronologia, registro)."
+        use_it: "Per rispondere a «cosa è successo e quando»: estrae da un'immagine ogni evento con data e ora e li mette in ordine, così ricostruisci la sequenza dei fatti."
+      - id: volatility3
+        name: "Analisi memoria (Volatility 3)"
+        package: volatility3
+        source: pip
+        binary: vol
+        gui: false
+        launch: terminal
+        desc_it: "Analizza un dump della RAM: processi attivi, connessioni di rete, malware presente solo in memoria."
+        use_it: "Su un PC compromesso, da un dump della RAM scopri i processi in esecuzione e le connessioni sospette che sul disco non lasciano traccia (malware 'fileless')."
+      - id: exiftool
+        name: "Metadati file (ExifTool)"
+        package: libimage-exiftool-perl
+        source: debian
+        binary: exiftool
+        gui: false
+        launch: terminal
+        desc_it: "Legge i metadati nascosti di foto e documenti (data, dispositivo, posizione GPS, autore)."
+        use_it: "Per sapere con quale fotocamera e dove è stata scattata una foto, o chi e quando ha creato un PDF: 'exiftool file'."
+      - id: hashdeep
+        name: "Verifica integrità (hashdeep)"
+        package: hashdeep
+        source: debian
+        binary: hashdeep
+        gui: false
+        launch: terminal
+        desc_it: "Calcola e confronta gli hash di interi alberi di cartelle (catena di custodia)."
+        use_it: "Per dimostrare che un insieme di prove non è cambiato: crei gli hash all'inizio e li riverifichi dopo ogni trasferimento."
+
+  - id: reversing
+    title_it: "Debug e analisi binaria"
+    icon: "applications-development"
+    intro_it: >
+      Capire cosa fa un programma di cui non hai il codice (un eseguibile sospetto,
+      un malware, un firmware). Prima analisi statica (senza eseguirlo), poi
+      dinamica (osservandolo mentre gira) in un ambiente isolato.
+    apps:
+      - id: ghidra
+        name: "Ghidra"
+        package: ghidra
+        source: kali
+        binary: ghidra
+        gui: true
+        launch: gui
+        desc_it: "Suite grafica di reverse engineering: decompila un eseguibile e te ne mostra il funzionamento in modo leggibile."
+        use_it: "Lo strumento di partenza per studiare un binario: apri il file e Ghidra ti mostra funzioni e logica quasi come codice sorgente. Download grande (~800 MB), richiede Internet."
+        note_it: "Fornito dall'archivio Kali (basato su Java). Richiede connessione a Internet per la prima installazione."
+      - id: okteta
+        name: "Okteta (editor esadecimale)"
+        package: okteta
+        source: debian
+        binary: okteta
+        gui: true
+        launch: gui
+        desc_it: "Editor esadecimale grafico: guarda e modifica i byte di un file, con decodifica dei valori."
+        use_it: "Per ispezionare l'inizio di un file e capirne il tipo, trovare testi nascosti o firme, o modificare un byte: tutto in una finestra grafica semplice."
+      - id: wxhexeditor
+        name: "wxHexEditor (file grandi)"
+        package: wxhexeditor
+        source: debian
+        binary: wxHexEditor
+        gui: true
+        launch: gui
+        desc_it: "Editor esadecimale grafico capace di aprire file e dischi enormi senza caricarli tutti in memoria."
+        use_it: "Quando devi ispezionare a mano un'immagine disco da molti GB: wxHexEditor la apre comunque, con ricerca e navigazione."
+      - id: clamtk
+        name: "Antivirus (ClamTk)"
+        package: clamtk
+        source: debian
+        binary: clamtk
+        gui: true
+        launch: gui
+        desc_it: "Interfaccia grafica dell'antivirus ClamAV: analizza file e cartelle con un clic."
+        use_it: "Per controllare se un file scaricato o una cartella contengono malware noto, senza usare comandi: scegli la cartella e premi Scansiona."
+      - id: gdb
+        name: "Debugger (GDB)"
+        package: gdb gdb-multiarch
+        source: debian
+        binary: gdb
+        gui: false
+        launch: terminal
+        desc_it: "Il debugger: esegue un programma passo-passo, con breakpoint e ispezione di memoria e registri. Include il supporto multi-architettura (ARM, MIPS…)."
+        use_it: "Per capire nel dettaglio cosa fa un binario in un punto preciso, o per studiare il firmware di un dispositivo ARM/IoT in emulazione."
+      - id: tracers
+        name: "Tracciatori (strace · ltrace)"
+        package: strace ltrace
+        source: debian
+        binary: strace
+        gui: false
+        launch: terminal
+        desc_it: "Mostrano, mentre il programma gira, le chiamate al sistema (file, rete) e alle librerie."
+        use_it: "Lanci 'strace ./sospetto' e vedi in chiaro quali file apre e a quali indirizzi si connette, senza leggerne il codice."
+      - id: radare2
+        name: "radare2"
+        package: radare2
+        source: kali
+        binary: r2
+        gui: false
+        launch: terminal
+        desc_it: "Framework di reverse engineering da console: disassembla, analizza ed esplora i binari."
+        use_it: "Alternativa a riga di comando a Ghidra, leggera e potente, per esaminare funzioni e stringhe di un eseguibile."
+        note_it: "Fornito dall'archivio Kali. Richiede connessione a Internet."
+      - id: binwalk
+        name: "Analisi firmware (binwalk)"
+        package: binwalk
+        source: debian
+        binary: binwalk
+        gui: false
+        launch: terminal
+        desc_it: "Riconosce ed estrae i contenuti incorporati in un'immagine di firmware (filesystem, kernel, file compressi)."
+        use_it: "Dato il firmware di un router o di un dispositivo IoT, 'binwalk -e firmware.bin' ne estrae il filesystem interno per esaminarlo."
+      - id: analysis-libs
+        name: "Librerie di analisi (Capstone + Unicorn)"
+        package: python3-capstone python3-unicorn
+        source: debian
+        binary: python3
+        gui: false
+        launch: terminal
+        check_import: capstone
+        desc_it: "Capstone trasforma i byte in istruzioni assembly leggibili; Unicorn emula la CPU per eseguire pezzi di codice in isolamento."
+        use_it: "Per automatizzare in Python l'analisi di un campione: disassemblare con Capstone ed eseguire in sicurezza (sandbox) una singola routine con Unicorn."
+        note_it: "Librerie Python: dopo l'installazione si aprirà una sessione Python pronta all'uso."

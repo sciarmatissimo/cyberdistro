@@ -30,7 +30,7 @@ echo "[2/4] Shell script syntax (bash -n)"
 for f in "$ROOT"/privacy/bin/privacy-mode "$ROOT"/privacy/tests/*.sh \
          "$ROOT"/privacy/persistence/*.sh "$ROOT"/build/build.sh \
          "$ROOT"/release/*.sh "$ROOT"/build/config/hooks/live/*.hook.chroot \
-         "$ROOT"/build/config/includes.chroot/usr/local/bin/*; do
+         "$ROOT"/build/config/includes.chroot/usr/local/bin/* "$ROOT"/build/config/includes.chroot/usr/local/sbin/*; do
     bash -n "$f" && echo "  OK   ${f#$ROOT/}" || { echo "  FAIL ${f#$ROOT/}"; fail=1; }
 done
 

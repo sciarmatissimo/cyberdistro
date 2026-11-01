@@ -62,7 +62,7 @@ richiede che l'utente dichiari un ambito autorizzato prima di procedere.
 | 3 | Security Center (core + GUI + modalità) | 🟡 core testato (35 test); GUI con **Esplora** visuale, modalità Principiante a tile, smoke test offscreen |
 | 4 | Privacy (Tor, kill-switch, DNS) | 🟡 ruleset e verifiche reali; integrazione da testare su ISO |
 | 5 | Persistenza cifrata (LUKS2) | 🟡 script reali; da testare end-to-end su hardware/VM |
-| 6 | Strumenti professionali (wrapper) | 🟡 wrapper reali per inventario/forense/privacy |
+| 6 | Strumenti professionali | 🟡 wrapper guidati (rete/privacy) + sezioni **Forense** e **Debug** con installazione on-demand (immagine più leggera) |
 | 7 | Test e rilascio | 🟡 suite eseguibile + tooling checksum/SBOM |
 
 Legenda: ✅ completo · 🟡 reale ma incompleto/non testato end-to-end · ❌ assente.

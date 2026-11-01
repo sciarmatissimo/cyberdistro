@@ -203,6 +203,31 @@ def cmd_explore(args) -> int:
     return 2
 
 
+def cmd_apps(args) -> int:
+    """List on-demand apps, or print the install/launch argv for one (no exec)."""
+    from .tools.appstore import AppStore
+    store = AppStore.load()
+    if args.app_id:
+        app = store.get(args.app_id)
+        if not app:
+            print(f"app sconosciuta: {args.app_id}", file=sys.stderr); return 2
+        _print({"id": app.id, "section": app.section, "name": app.name,
+                "package": app.packages, "source": app.source, "gui": app.gui,
+                "installed": app.installed(),
+                "install_command": app.install_argv(),
+                "launch_command": app.launch_argv(),
+                "description": app.desc_it, "use_case": app.use_it})
+        return 0
+    out = []
+    for sec in store.sections:
+        out.append({"section": sec.id, "title": sec.title_it,
+                    "apps": [{"id": a.id, "name": a.name, "gui": a.gui,
+                              "source": a.source, "installed": a.installed()}
+                             for a in sec.apps]})
+    _print(out)
+    return 0
+
+
 def cmd_report(args) -> int:
     proj = Project.load(args.base, args.project)
     if args.format == "json":
@@ -264,6 +289,10 @@ def build_parser() -> argparse.ArgumentParser:
     px.add_argument("--yes", action="store_true",
                     help="confermo: è la mia rete o sono autorizzato a osservarla")
     px.set_defaults(func=cmd_explore)
+
+    pa = sub.add_parser("apps", help="app installabili on-demand (forense/reversing)")
+    pa.add_argument("app_id", nargs="?", help="mostra dettagli e comandi di una app")
+    pa.set_defaults(func=cmd_apps)
 
     prep = sub.add_parser("report", help="genera un report")
     prep.add_argument("project")

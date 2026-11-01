@@ -74,6 +74,27 @@ crea un **Progetto** con il tuo intervallo autorizzato e usa **Strumenti →
 Inventario di rete (Nmap)**. Se provi un bersaglio **fuori** dall'ambito
 autorizzato, il sistema ti **blocca**: è voluto.
 
+## 6-bis. Installare gli strumenti che ti servono (Forense / Debug)
+Per tenere la chiavetta leggera, gli strumenti forensi e di analisi dei programmi
+**non sono preinstallati**: li scegli tu dal Security Center, nelle due sezioni
+del menu a sinistra **Forense e acquisizione** e **Debug e analisi binaria**
+(visibili anche in modalità Principiante).
+
+In ogni sezione trovi una scheda per ogni strumento con: a cosa serve, un esempio
+pratico di quando usarlo, e un'etichetta che dice se ha un'**interfaccia grafica**
+(più adatta a chi inizia) o è a **riga di comando**. Premi **«Installa e usa»**:
+lo strumento viene scaricato e installato (serve Internet) e poi si apre da solo.
+La volta successiva il pulsante diventa **«Apri»**.
+
+Consigli per iniziare, con strumenti grafici semplici:
+- **Guymager** (Forense): fai la copia esatta di una chiavetta prima di analizzarla.
+- **Autopsy** (Forense): sfoglia il contenuto di quella copia e ritrova i file cancellati.
+- **Okteta** (Debug): guarda i byte di un file in una finestra grafica.
+- **ClamTk** (Debug): passa l'antivirus a un file o una cartella con un clic.
+
+> Con la **persistenza cifrata** gli strumenti installati restano anche dopo il
+> riavvio; in modalità Live senza persistenza vanno reinstallati a ogni avvio.
+
 ## 7. Navigare in modo anonimo
 - Barra di stato → icona privacy → scegli **Anonimato Tor**.
 - Si attiva il *kill-switch*: se Tor non funziona, la rete viene **bloccata**

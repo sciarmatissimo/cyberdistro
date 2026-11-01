@@ -33,6 +33,7 @@ from ..core.modes import Mode
 from ..i18n import t as _t
 from ..tools import explore as ex
 from ..tools import privacy_status as ps
+from ..tools import appstore as appstore
 from .. import __version__
 
 MODE_LABELS = {Mode.BEGINNER: "Principiante", Mode.PROFESSIONAL: "Professionista",
@@ -704,11 +705,161 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
                 f"comando con lo stesso motore della GUI:<br><code>{html.escape(cmd_hint)}</code>"))
             lay.addStretch(1)
 
+    # ----------------------------------------------- on-demand app sections
+    def appstore_icon(section_icon: str, gui: bool, size: int = 40):
+        name = section_icon
+        if QtGui.QIcon.hasThemeIcon(name):
+            return QtGui.QIcon.fromTheme(name)
+        pm = QtGui.QPixmap(size, size)
+        pm.fill(QtCore.Qt.transparent)
+        p = QtGui.QPainter(pm)
+        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        p.setBrush(QtGui.QColor("#0a84ff" if gui else "#8e8e93"))
+        p.setPen(QtCore.Qt.NoPen)
+        p.drawRoundedRect(0, 0, size, size, 10, 10)
+        f = p.font(); f.setPixelSize(int(size * 0.5)); p.setFont(f)
+        p.setPen(QtGui.QColor("white"))
+        p.drawText(pm.rect(), QtCore.Qt.AlignCenter, "🖥" if gui else "⌨")
+        p.end()
+        return QtGui.QIcon(pm)
+
+    class AppCard(QtWidgets.QFrame):
+        """One installable application: description, use case, install/open."""
+
+        def __init__(self, app, section_icon, win):
+            super().__init__()
+            self.app = app
+            self.win = win
+            self._worker = None
+            self.setObjectName("Card")
+            self.setStyleSheet(
+                "#Card { background: palette(base); border: 1px solid palette(midlight);"
+                " border-radius: 14px; }")
+            lay = QtWidgets.QVBoxLayout(self)
+            lay.setContentsMargins(16, 14, 16, 14)
+            lay.setSpacing(6)
+
+            head = QtWidgets.QHBoxLayout()
+            ic = QtWidgets.QLabel()
+            ic.setPixmap(appstore_icon(section_icon, app.gui, 40).pixmap(40, 40))
+            head.addWidget(ic)
+            tt = QtWidgets.QVBoxLayout(); tt.setSpacing(0)
+            tt.addWidget(QtWidgets.QLabel(f"<b style='font-size:15px'>{html.escape(app.name)}</b>"))
+            badge = _t("app.gui_badge") if app.gui else _t("app.cli_badge")
+            bcol = "#0a84ff" if app.gui else "#8e8e93"
+            tt.addWidget(QtWidgets.QLabel(
+                f"<span style='color:{bcol}'>● {html.escape(badge)}</span>"))
+            head.addLayout(tt, 1)
+            self.btn = QtWidgets.QPushButton()
+            self.btn.setMinimumWidth(150)
+            self.btn.setMinimumHeight(34)
+            self.btn.clicked.connect(self._on_click)
+            head.addWidget(self.btn, 0, QtCore.Qt.AlignTop)
+            lay.addLayout(head)
+
+            desc = muted(app.desc_it); lay.addWidget(desc)
+            use = QtWidgets.QLabel(
+                f"<b>{html.escape(_t('app.use_label'))}:</b> {html.escape(app.use_it)}")
+            use.setWordWrap(True); lay.addWidget(use)
+            if app.note_it:
+                note = muted("ⓘ " + app.note_it); lay.addWidget(note)
+            self.status = muted(""); lay.addWidget(self.status)
+            self._refresh_button()
+
+        def _refresh_button(self):
+            if self.app.installed():
+                self.btn.setText(_t("app.open"))
+                self.btn.setObjectName("")
+                self.status.setText("● " + _t("app.installed"))
+                self.status.setStyleSheet("color: #30d158;")
+            else:
+                self.btn.setText(_t("app.install"))
+                self.status.setText("")
+            self.btn.setEnabled(True)
+
+        def _on_click(self):
+            if self.app.installed():
+                self._launch()
+            else:
+                self._install()
+
+        def _launch(self):
+            try:
+                appstore.run_launch(self.app)
+                self.win.log_operation(" ".join(self.app.launch_argv()), 0)
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(self, self.app.name, f"Avvio non riuscito: {e}")
+
+        def _install(self):
+            if self._worker is not None:
+                return
+            self.btn.setEnabled(False)
+            self.status.setStyleSheet("color: palette(mid);")
+            self.status.setText("⏳ " + _t("app.installing"))
+            self._worker = Worker(appstore.run_install, self.app)
+            self._worker.done.connect(self._installed)
+            self._worker.failed.connect(self._failed)
+            self._worker.finished.connect(self._cleanup)
+            self._worker.start()
+
+        def _installed(self, proc):
+            rc = getattr(proc, "returncode", 1)
+            self.win.log_operation(" ".join(self.app.install_argv()), rc)
+            if rc == 0 and self.app.installed():
+                self._refresh_button()
+                self._launch()
+            else:
+                tail = (getattr(proc, "stderr", "") or getattr(proc, "stdout", "") or "")[-400:]
+                self.status.setStyleSheet("color: #ff3b30;")
+                self.status.setText("✕ " + _t("app.install_failed")
+                                    + (" " + _t("app.needs_net") if self.app.source != "pip" else ""))
+                if tail.strip():
+                    QtWidgets.QMessageBox.warning(self, self.app.name, tail)
+                self.btn.setEnabled(True)
+
+        def _failed(self, msg):
+            self.status.setStyleSheet("color: #ff3b30;")
+            self.status.setText("✕ " + _t("app.install_failed"))
+            QtWidgets.QMessageBox.warning(self, self.app.name, msg)
+            self.btn.setEnabled(True)
+
+        def _cleanup(self):
+            self._worker = None
+
+    class AppStorePage(QtWidgets.QWidget):
+        def __init__(self, section, win):
+            super().__init__()
+            self.section = section
+            root = QtWidgets.QVBoxLayout(self)
+            root.setContentsMargins(28, 24, 28, 16)
+            root.addWidget(h1(section.title_it))
+            root.addWidget(muted(section.intro_it))
+            root.addWidget(muted("Le applicazioni non sono preinstallate (così l'immagine "
+                                 "resta leggera): scegli quelle che ti servono e premi "
+                                 "«" + _t("app.install") + "». Serve una connessione a Internet."))
+            scroll = QtWidgets.QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+            inner = QtWidgets.QWidget()
+            col = QtWidgets.QVBoxLayout(inner)
+            col.setContentsMargins(0, 8, 8, 0)
+            col.setSpacing(12)
+            self.cards = []
+            for app in section.apps:
+                c = AppCard(app, section.icon, win)
+                self.cards.append(c)
+                col.addWidget(c)
+            col.addStretch(1)
+            scroll.setWidget(inner)
+            root.addWidget(scroll, 1)
+
     # ---------------------------------------------------------- main window
     class MainWindow(QtWidgets.QMainWindow):
         PAGES = [  # key, label, beginner-visible
             ("explore", "Esplora", True),
             ("dashboard", "Panoramica", True),
+            ("forensics", "Forense e acquisizione", True),
+            ("reversing", "Debug e analisi binaria", True),
             ("catalog", "Strumenti", False),
             ("privacy", "Privacy", True),
             ("projects", "Progetti", False),
@@ -722,6 +873,7 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             self.resize(1180, 760)
             self.mode = Mode.parse(os.environ.get("CYBERDISTRO_MODE"), Mode.BEGINNER)
             self.catalog = Catalog.load()
+            self.store = appstore.AppStore.load()
             self.operations: list[tuple[str, int]] = []
 
             central = QtWidgets.QWidget()
@@ -764,6 +916,8 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             self.pages = {
                 "explore": ExplorePage(self),
                 "dashboard": DashboardPage(self),
+                "forensics": AppStorePage(self.store.section("forensics"), self),
+                "reversing": AppStorePage(self.store.section("reversing"), self),
                 "catalog": CatalogPage(self),
                 "privacy": PrivacyPage(self),
                 "projects": CliBackedPage("Progetti", "cyberdistro-sc project new NOME --owner CHI --scope 192.168.1.0/24"),
@@ -780,6 +934,7 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             self.nav.blockSignals(True)
             self.nav.clear()
             icons = {"explore": "network-wireless", "dashboard": "dashboard-show",
+                     "forensics": "drive-harddisk", "reversing": "applications-development",
                      "catalog": "applications-utilities", "privacy": "security-high",
                      "projects": "folder", "reports": "x-office-document", "learn": "help-contents"}
             for key, label, beginner_ok in self.PAGES:

@@ -1,16 +1,9 @@
-# 8.4 Digital Forensics & Incident Response (repeatability, chain of custody)
-sleuthkit
-autopsy
+# 8.4 Digital Forensics & Incident Response
+#
+# The forensic acquisition/analysis applications are NOT pre-installed: the user
+# installs the ones they need from the Security Center → "Forense e acquisizione"
+# (keeps the image small). See security-center/.../data/ondemand.yaml.
+#
+# Only the lightweight, dependency-free building blocks that the rest of the
+# system or a first look benefit from stay baked in:
 yara
-ewf-tools
-libewf-dev
-dc3dd
-dcfldd
-gddrescue
-hashdeep
-exiftool
-foremost
-scalpel
-plaso
-# bulk-extractor comes from the Kali archive → installed by hook 0600 (tolerant).
-# Volatility 3 is installed via pip in a hook (packaging lags); see hook 0300.

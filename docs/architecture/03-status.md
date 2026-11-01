@@ -1,5 +1,34 @@
 # 03 — Stato puntuale e limitazioni note
 
+## Novità 0.3.0-alpha (2026-11-01)
+- **Security Center**: due nuove sezioni nel menu a sinistra, visibili anche in
+  modalità Principiante:
+  - **Forense e acquisizione** (11 app: Guymager, GNOME Disks, Autopsy,
+    TestDisk/PhotoRec, strumenti E01, copia forense dc3dd/dcfldd/ddrescue,
+    carving foremost/scalpel, Plaso, Volatility 3, ExifTool, hashdeep).
+  - **Debug e analisi binaria** (9 app: Ghidra, Okteta, wxHexEditor, ClamTk,
+    GDB, strace/ltrace, radare2, binwalk, Capstone+Unicorn).
+  Ogni app è una scheda con descrizione, casistica d'uso, badge GUI/CLI e un
+  pulsante **Installa e usa** (installa on-demand e poi avvia). Le app GUI
+  adatte ai principianti sono mostrate per prime.
+- **Installazione on-demand**: `/usr/local/sbin/cyberdistro-install-app`
+  (via pkexec) installa da Debian, da Kali (pinned) o via pip a seconda dell'app.
+  Catalogo machine-readable in `security-center/.../data/ondemand.yaml`;
+  comando CLI `cyberdistro-sc apps`.
+- **Immagine più piccola**: queste applicazioni NON sono più preinstallate
+  (prima lo erano in parte). Rimossi dai pacchetti di base gli strumenti forensi
+  e di reversing pesanti (gdb-multiarch, clamav, autopsy, plaso, exiftool,
+  capstone/unicorn, radare2…) e gli hook che li installavano. SBOM da 120 a 100
+  componenti; attesa riduzione della ISO di alcune centinaia di MB.
+- **Invariante testata**: un test unitario verifica che nessuna app on-demand
+  sia preinstallata nei package-list, così la build resta leggera.
+- **Verifica**: 42 test unitari + smoke test GUI offscreen (che installa e avvia
+  una app con install/launch simulati) con screenshot delle due sezioni.
+- **Disponibilità reale**: Ghidra e radare2 da Kali; gdb/gdb-multiarch da Debian
+  (la build Kali richiede una libc più recente di trixie); Volatility 3 via pip.
+  Cutter/rizin-cutter non offerti: non installabili su trixie (conflitto libc6).
+
+
 ## Novità 0.2.0-alpha (2026-10-30)
 - **Desktop**: look-and-feel Plasma `org.cyberdistro.desktop` (`desktop/look-and-feel/`)
   selezionato da `/etc/xdg/kdeglobals`. Barra inferiore: menu → **Impostazioni di

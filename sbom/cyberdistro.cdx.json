@@ -3,7 +3,7 @@
   "specVersion": "1.5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-30T18:47:25.128964+00:00",
+    "timestamp": "2026-11-01T10:40:19.194355+00:00",
     "component": {
       "type": "operating-system",
       "name": "CyberDistro",
@@ -581,34 +581,6 @@
     },
     {
       "type": "library",
-      "name": "sleuthkit",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/sleuthkit",
-      "licenses": [
-        {
-          "license": {
-            "name": "GPL-2.0-or-later / CPL-1.0"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "autopsy",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/autopsy",
-      "licenses": [
-        {
-          "license": {
-            "name": "Apache-2.0"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "yara",
       "version": "resolved-at-build",
       "group": "os-packages/forensics",
@@ -617,132 +589,6 @@
         {
           "license": {
             "name": "BSD-3-Clause"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "ewf-tools",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/ewf-tools"
-    },
-    {
-      "type": "library",
-      "name": "libewf-dev",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/libewf-dev"
-    },
-    {
-      "type": "library",
-      "name": "dc3dd",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/dc3dd"
-    },
-    {
-      "type": "library",
-      "name": "dcfldd",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/dcfldd"
-    },
-    {
-      "type": "library",
-      "name": "gddrescue",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/gddrescue"
-    },
-    {
-      "type": "library",
-      "name": "hashdeep",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/hashdeep"
-    },
-    {
-      "type": "library",
-      "name": "exiftool",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/exiftool",
-      "licenses": [
-        {
-          "license": {
-            "name": "Artistic-1.0 / GPL-1.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "foremost",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/foremost"
-    },
-    {
-      "type": "library",
-      "name": "scalpel",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/scalpel"
-    },
-    {
-      "type": "library",
-      "name": "plaso",
-      "version": "resolved-at-build",
-      "group": "os-packages/forensics",
-      "purl": "pkg:deb/debian/plaso"
-    },
-    {
-      "type": "library",
-      "name": "gdb",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/gdb",
-      "licenses": [
-        {
-          "license": {
-            "name": "GPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "gdb-multiarch",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/gdb-multiarch"
-    },
-    {
-      "type": "library",
-      "name": "strace",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/strace"
-    },
-    {
-      "type": "library",
-      "name": "ltrace",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/ltrace"
-    },
-    {
-      "type": "library",
-      "name": "binwalk",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/binwalk",
-      "licenses": [
-        {
-          "license": {
-            "name": "MIT"
           }
         }
       ]
@@ -767,41 +613,6 @@
       "version": "resolved-at-build",
       "group": "os-packages/reversing",
       "purl": "pkg:deb/debian/hexedit"
-    },
-    {
-      "type": "library",
-      "name": "python3-capstone",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/python3-capstone"
-    },
-    {
-      "type": "library",
-      "name": "python3-unicorn",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/python3-unicorn"
-    },
-    {
-      "type": "library",
-      "name": "clamav",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/clamav",
-      "licenses": [
-        {
-          "license": {
-            "name": "GPL-2.0-only"
-          }
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "clamav-freshclam",
-      "version": "resolved-at-build",
-      "group": "os-packages/reversing",
-      "purl": "pkg:deb/debian/clamav-freshclam"
     },
     {
       "type": "library",

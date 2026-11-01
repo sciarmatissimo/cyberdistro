@@ -1,15 +1,10 @@
-# 8.5 Reverse Engineering & Malware Analysis (static-first, isolated)
-# ghidra, radare2 and rizin come from the Kali archive → hook 0600 (tolerant).
-gdb
-gdb-multiarch
-strace
-ltrace
-binwalk
-foremost
+# 8.5 Reverse Engineering & Malware Analysis
+#
+# The debugging / binary-analysis applications are NOT pre-installed: the user
+# installs the ones they need from the Security Center → "Debug e analisi
+# binaria" (keeps the image small). See .../data/ondemand.yaml.
+#
+# Only tiny, generally-useful inspection utilities stay baked in:
 file
 xxd
 hexedit
-python3-capstone
-python3-unicorn
-clamav
-clamav-freshclam

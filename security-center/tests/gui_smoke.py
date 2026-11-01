@@ -132,6 +132,55 @@ explore.tabs.setCurrentIndex(1); shot("05-beginner-bluetooth")
 print("[bluetooth] status:", explore.bt_status.text())
 explore.tabs.setCurrentIndex(0)
 
+# 3b) On-demand app sections. Stub install/launch so no real apt/pkexec runs,
+#     but exercise the whole GUI path (worker thread, state flip install→open).
+from cyberdistro_sc.tools import appstore as _A  # noqa: E402
+
+_fake_installed = set()
+_A.App.installed = lambda self: self.id in _fake_installed
+
+
+class _FakeProc:
+    returncode = 0
+    stdout = ""
+    stderr = ""
+
+
+def _fake_install(app, runner=None):
+    _fake_installed.add(app.id)
+    return _FakeProc()
+
+
+_launched = []
+_A.run_install = _fake_install
+_A.run_launch = lambda app, spawner=None: _launched.append(app.id)
+
+forx = win.pages["forensics"]
+# every forensic app is listed, GUI tools first
+print("[forensics] apps:", [c.app.id for c in forx.cards])
+assert forx.cards and forx.cards[0].app.gui
+win.go("forensics"); shot("11-beginner-forense")
+
+# click "Installa e usa" on the first card, wait for the worker, verify it
+# flips to installed and launches.
+card0 = forx.cards[0]
+assert "Installa" in card0.btn.text()
+card0._on_click()
+for _ in range(50):
+    wait(50)
+    if card0._worker is None:
+        break
+print("[forensics] after install:", card0.app.id, "->", card0.btn.text(),
+      "launched:", _launched)
+assert card0.app.id in _fake_installed and card0.app.id in _launched
+assert card0.app.installed()
+shot("12-beginner-forense-installato")
+
+revx = win.pages["reversing"]
+print("[reversing] apps:", [c.app.id for c in revx.cards])
+assert any(c.app.id == "ghidra" for c in revx.cards)
+win.go("reversing"); shot("13-beginner-reversing")
+
 # 4) Privacy + Impara pages.
 win.go("privacy"); shot("06-privacy")
 win.go("learn"); shot("07-impara")

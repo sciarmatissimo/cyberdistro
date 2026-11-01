@@ -1,0 +1,72 @@
+#!/bin/sh
+# cyberdistro-install-app — install an on-demand application chosen by the user
+# in the Security Center. Keeps the ISO small: nothing here is pre-baked.
+#
+# Usage (run as root, normally via pkexec from the Security Center):
+#   cyberdistro-install-app --apt  <pkg> [pkg...]     # Debian (system base)
+#   cyberdistro-install-app --kali <pkg> [pkg...]     # add pinned Kali archive
+#   cyberdistro-install-app --pip  <spec> [spec...]   # pip (packaging lags)
+#
+# Debian stays the system of record: the Kali archive is pinned to low priority.
+set -eu
+
+[ "$(id -u)" = 0 ] || { echo "!! Richiede privilegi di amministratore."; exit 1; }
+[ "$#" -ge 2 ] || { echo "Uso: $0 --apt|--kali|--pip <pacchetto> [...]"; exit 2; }
+
+MODE="$1"; shift
+export DEBIAN_FRONTEND=noninteractive
+
+KEY=/usr/share/keyrings/kali-archive-keyring.gpg
+FPR=827C8569F2518CC677FECA1AED65462EC8D5E4C5
+
+setup_kali() {
+    echo ">> Preparo il repository Kali (verificato) ..."
+    if [ ! -s "$KEY" ]; then
+        tmp="$(mktemp)"
+        if ! wget -qO "$tmp" https://archive.kali.org/archive-keyring.gpg; then
+            echo "!! Download della chiave fallito. Sei connesso a Internet?"; rm -f "$tmp"; exit 1
+        fi
+        got="$(gpg --show-keys --with-colons "$tmp" 2>/dev/null | awk -F: '/^fpr:/{print $10; exit}')"
+        if [ "$got" != "$FPR" ]; then
+            echo "!! Impronta chiave Kali non valida ($got). Interrompo per sicurezza."; rm -f "$tmp"; exit 1
+        fi
+        install -m 0644 "$tmp" "$KEY"; rm -f "$tmp"
+        echo "   chiave Kali verificata e installata."
+    fi
+    cat > /etc/apt/sources.list.d/kali.list <<KALI
+deb [signed-by=${KEY}] http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware
+KALI
+    cat > /etc/apt/preferences.d/kali <<PIN
+Package: *
+Pin: release o=Debian
+Pin-Priority: 990
+
+Package: *
+Pin: release o=Kali
+Pin-Priority: 100
+PIN
+}
+
+case "$MODE" in
+    --apt)
+        echo ">> Aggiorno gli indici dei pacchetti ..."
+        apt-get update
+        echo ">> Installo (Debian): $* ..."
+        apt-get install -y --no-install-recommends "$@"
+        ;;
+    --kali)
+        setup_kali
+        echo ">> Aggiorno gli indici dei pacchetti ..."
+        apt-get update
+        echo ">> Installo (Kali, pinned): $* ..."
+        apt-get install -y --install-recommends "$@"
+        ;;
+    --pip)
+        command -v pip3 >/dev/null 2>&1 || { apt-get update; apt-get install -y --no-install-recommends python3-pip; }
+        echo ">> Installo con pip: $* ..."
+        pip3 install --break-system-packages "$@"
+        ;;
+    *)
+        echo "Modalità sconosciuta: $MODE (usa --apt|--kali|--pip)"; exit 2 ;;
+esac
+echo ">> Fatto."
