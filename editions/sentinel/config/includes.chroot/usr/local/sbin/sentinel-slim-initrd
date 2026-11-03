@@ -1,0 +1,34 @@
+#!/bin/sh
+# sentinel-slim-initrd IMAGE KVER — drop Nvidia GPU firmware and nouveau from a
+# live initrd and repack it (uncompressed early microcode archives + xz main).
+# Called at the end of the build by the binary hook 0800-sentinel-initrd: it
+# must run AFTER live-build's chroot_hacks, which regenerates the initrd.
+# initramfs-tools (trixie) copies firmware with dracut-install after its own
+# hooks, so an initramfs hook cannot do this. nouveau loads later from the root
+# filesystem, where its firmware is present. Feasibility study: 120 -> ~58 MB.
+set -e
+img="$1"; kver="$2"
+before=$(stat -c%s "$img")
+work=$(mktemp -d)
+unmkinitramfs "$img" "$work"
+main="$work/main"
+[ -d "$main" ] || main="$work"
+rm -rf "$main/usr/lib/firmware/nvidia" "$main/lib/firmware/nvidia"
+find "$main" -name 'nouveau.ko*' -delete
+if [ -d "$main/usr/lib/modules/$kver" ]; then depmod -b "$main/usr" "$kver" 2>/dev/null || true; fi
+if [ -d "$main/lib/modules/$kver" ] && [ ! -L "$main/lib" ]; then depmod -b "$main" "$kver" 2>/dev/null || true; fi
+out="$work/new.img"
+: > "$out"
+for e in "$work"/early*; do
+    [ -d "$e" ] || continue
+    ( cd "$e" && find . | LC_ALL=C sort | cpio -o -H newc --quiet ) >> "$out"
+done
+( cd "$main" && find . | LC_ALL=C sort | cpio -o -H newc --quiet | xz -9 --check=crc32 -T0 ) >> "$out"
+# sanity: the new image must still contain /init and the live-boot scripts
+check=$(mktemp -d)
+unmkinitramfs "$out" "$check"
+{ [ -e "$check/main/init" ] || [ -e "$check/init" ]; } || { echo "E: slimmed initrd has no /init"; exit 1; }
+{ [ -e "$check/main/scripts/live" ] || [ -e "$check/scripts/live" ]; } || { echo "E: slimmed initrd lacks live-boot"; exit 1; }
+install -m644 "$out" "$img"
+rm -rf "$work" "$check"
+echo "I: initrd $kver slimmed: $before -> $(stat -c%s "$img") bytes"

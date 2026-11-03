@@ -1,0 +1,63 @@
+#!/bin/bash
+# CyberDistro Sentinel — run Suricata and Zeek on the interface of the default
+# route, PASSIVELY (af-packet / libpcap capture, no inline mode, no packets
+# sent). Restarts both when the network changes; stops them when there is no
+# network, so the GUI correctly shows GREY.
+#
+# Logs: /var/log/suricata/eve.json and /var/log/zeek/current/*.log (JSON),
+# group "sentinel", mode 640, rotated by sentinel-logcap.
+set -u
+
+RULES=/etc/suricata/rules/sentinel.rules
+SCONF=/etc/suricata/sentinel.yaml
+SLOG=/var/log/suricata
+ZLOG=/var/log/zeek/current
+ZEEK=/opt/zeek/bin/zeek
+umask 027
+
+prep_dirs() {
+    for d in "$SLOG" "$ZLOG"; do
+        mkdir -p "$d"
+        chgrp sentinel "$d" 2>/dev/null || true
+        chmod 2750 "$d"
+    done
+}
+
+default_iface() {
+    ip route show default 2>/dev/null | awk '/^default/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}'
+}
+
+SPID="" ; ZPID="" ; CUR=""
+
+stop_all() {
+    [ -n "$SPID" ] && kill "$SPID" 2>/dev/null
+    [ -n "$ZPID" ] && kill "$ZPID" 2>/dev/null
+    sleep 1
+    [ -n "$SPID" ] && kill -9 "$SPID" 2>/dev/null
+    [ -n "$ZPID" ] && kill -9 "$ZPID" 2>/dev/null
+    SPID="" ; ZPID="" ; CUR=""
+}
+
+start_all() {
+    local ifc="$1"
+    prep_dirs
+    echo "sentinel-engines: avvio monitoraggio passivo su $ifc"
+    suricata -c "$SCONF" --af-packet="$ifc" -S "$RULES" -l "$SLOG" -k none &
+    SPID=$!
+    ( cd "$ZLOG" && exec "$ZEEK" -C -i "$ifc" local sentinel ) &
+    ZPID=$!
+    CUR="$ifc"
+}
+
+trap 'stop_all; exit 0' TERM INT
+
+while true; do
+    ifc="$(default_iface)"
+    if [ -z "$ifc" ]; then
+        [ -n "$CUR" ] && { echo "sentinel-engines: nessuna rete, motori fermati"; stop_all; }
+    elif [ "$ifc" != "$CUR" ] || ! kill -0 "$SPID" 2>/dev/null || ! kill -0 "$ZPID" 2>/dev/null; then
+        [ -n "$CUR" ] && stop_all
+        start_all "$ifc"
+    fi
+    sleep 5
+done

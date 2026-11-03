@@ -1,8 +1,8 @@
-cache/
-.build/
-chroot/
-binary/
-local/
+/cache/
+/.build/
+/chroot/
+/binary/
+/local/
 config/includes.chroot/opt/cyberdistro-src/
 config/includes.chroot/opt/cyberdistro/
 config/includes.chroot/etc/suricata/rules/

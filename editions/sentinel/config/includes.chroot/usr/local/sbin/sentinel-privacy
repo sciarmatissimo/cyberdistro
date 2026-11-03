@@ -1,0 +1,20 @@
+#!/bin/bash
+# CyberDistro Sentinel — privacy profile switch (wraps the shared privacy-mode).
+# Unlike the PC Edition, Tor may not be installed: the Tor profile is REFUSED
+# until Tor is installed and running, so the kill-switch can never be loaded
+# with the wrong (missing) Tor user and the user is never told they are
+# anonymous when they are not.
+set -euo pipefail
+PM=/usr/local/sbin/privacy-mode
+
+case "${1:-status}" in
+    tor|hardened)
+        if ! id debian-tor >/dev/null 2>&1 || ! command -v tor >/dev/null; then
+            echo "Rifiutato: Tor non è installato. Installalo dalla sezione Privacy." >&2; exit 3
+        fi
+        systemctl is-active --quiet tor || systemctl start tor
+        exec "$PM" "$1" ;;
+    standard|off|status)
+        exec "$PM" "$1" ;;
+    *) echo "Uso: $0 {status|standard|tor|hardened}" >&2; exit 2 ;;
+esac

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Keep engine logs bounded (live mode stores them in RAM): rotate Suricata's
+# eve.json above 64 MB (SIGHUP makes Suricata reopen it) and cap the sensor
+# log. Run every minute by sentinel-logcap.timer.
+set -u
+EVE=/var/log/suricata/eve.json
+if [ -f "$EVE" ] && [ "$(stat -c%s "$EVE")" -gt 67108864 ]; then
+    mv -f "$EVE" "$EVE.1"
+    pkill -HUP -x Suricata-Main 2>/dev/null || pkill -HUP suricata 2>/dev/null || true
+    sleep 5
+    rm -f "$EVE.1"
+fi
+SENS=/var/lib/sentinel/sensor.jsonl
+if [ -f "$SENS" ] && [ "$(stat -c%s "$SENS")" -gt 16777216 ]; then
+    tail -n 2000 "$SENS" > "$SENS.tmp" && cat "$SENS.tmp" > "$SENS" && rm -f "$SENS.tmp"
+fi
+exit 0

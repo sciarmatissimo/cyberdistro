@@ -1,0 +1,53 @@
+#!/bin/bash
+# CyberDistro Sentinel — approved defensive actions (run via pkexec from the GUI).
+# Only touches THIS computer's firewall. Never touches the router or other
+# devices. Every block has an expiry and can be undone.
+#
+#   sentinel-action block <ip> [hours]   block traffic to/from <ip> on this PC
+#   sentinel-action unblock <ip>         undo
+#   sentinel-action list                 show active blocks
+set -euo pipefail
+
+TABLE="inet sentinel"
+
+valid_ip() {
+    python3 - "$1" <<'PY'
+import ipaddress, sys
+a = ipaddress.ip_address(sys.argv[1])
+sys.exit(0 if a.version == 4 and not (a.is_loopback or a.is_multicast or a.is_unspecified) else 1)
+PY
+}
+
+ensure_table() {
+    nft list table $TABLE >/dev/null 2>&1 && return
+    nft -f - <<'EOF'
+table inet sentinel {
+    set blocked4 { type ipv4_addr; flags timeout; }
+    chain input  { type filter hook input  priority -10; policy accept; ip saddr @blocked4 drop; }
+    chain output { type filter hook output priority -10; policy accept; ip daddr @blocked4 drop; }
+}
+EOF
+}
+
+case "${1:-}" in
+    block)
+        ip="${2:?indirizzo mancante}"; hours="${3:-24}"
+        valid_ip "$ip" || { echo "Indirizzo non valido: $ip" >&2; exit 2; }
+        [[ "$hours" =~ ^[0-9]+$ ]] && [ "$hours" -ge 1 ] && [ "$hours" -le 168 ] || { echo "Durata non valida" >&2; exit 2; }
+        gw="$(ip route show default | awk '/^default/{print $3; exit}')"
+        [ "$ip" = "$gw" ] && { echo "Rifiutato: $ip è il router; bloccarlo interromperebbe la connessione." >&2; exit 3; }
+        ensure_table
+        nft add element $TABLE blocked4 "{ $ip timeout ${hours}h }"
+        echo "Bloccato $ip su questo PC per ${hours} ore."
+        ;;
+    unblock)
+        ip="${2:?indirizzo mancante}"
+        valid_ip "$ip" || { echo "Indirizzo non valido: $ip" >&2; exit 2; }
+        nft delete element $TABLE blocked4 "{ $ip }" 2>/dev/null && echo "Sbloccato $ip." || echo "$ip non era bloccato."
+        ;;
+    list)
+        nft list set $TABLE blocked4 2>/dev/null || echo "Nessun blocco attivo."
+        ;;
+    *)
+        echo "Uso: $0 block <ip> [ore] | unblock <ip> | list" >&2; exit 2 ;;
+esac

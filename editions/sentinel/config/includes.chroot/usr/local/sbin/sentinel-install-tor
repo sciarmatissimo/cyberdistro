@@ -1,0 +1,65 @@
+#!/bin/bash
+# CyberDistro Sentinel — install Tor on demand (Sentinel ships without it).
+#
+#   sentinel-install-tor tor       tor + torsocks + obfs4proxy from Debian (signed archive)
+#   sentinel-install-tor browser   Tor Browser from torproject.org, GPG-verified
+#   sentinel-install-tor status
+#
+# Live mode: everything is installed in RAM and disappears at shutdown.
+# The download happens BEFORE Tor is active: a network observer sees that this
+# computer contacts deb.debian.org / dist.torproject.org.
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+# Tor Browser signing key (Tor Browser Developers), as used by the PC Edition hook.
+TBB_FPR="EF6E286DDA85EA2A4BA7DE684E2C6E8793298290"
+TBB_DIR=/opt/tor-browser
+
+need_root() { [ "$(id -u)" = 0 ] || { echo "Servono privilegi di amministratore." >&2; exit 1; }; }
+
+case "${1:-}" in
+    tor)
+        need_root
+        echo ">> Aggiorno l'elenco dei pacchetti Debian ..."
+        apt-get update
+        echo ">> Installo tor, torsocks, obfs4proxy ..."
+        apt-get install -y --no-install-recommends tor torsocks obfs4proxy
+        systemctl enable --now tor.service
+        install -D -m644 /usr/share/cyberdistro/privacy/killswitch.nft /etc/cyberdistro/privacy/killswitch.nft
+        echo "OK: Tor installato e avviato. La navigazione NON è ancora anonima: attiva il profilo Tor."
+        ;;
+    browser)
+        need_root
+        command -v tor >/dev/null || { echo "Installa prima Tor." >&2; exit 2; }
+        tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+        cd "$tmp"
+        echo ">> Cerco l'ultima versione di Tor Browser ..."
+        wget -q -O downloads.json https://aus1.torproject.org/torbrowser/update_3/release/downloads.json
+        ver="$(python3 -c 'import json;print(json.load(open("downloads.json"))["version"])')"
+        [[ "$ver" =~ ^[0-9.]+$ ]] || { echo "Versione non valida" >&2; exit 3; }
+        pkg="tor-browser-linux-x86_64-${ver}.tar.xz"
+        base="https://dist.torproject.org/torbrowser/${ver}"
+        echo ">> Scarico Tor Browser ${ver} ..."
+        wget -q "${base}/${pkg}" "${base}/${pkg}.asc"
+        export GNUPGHOME="$tmp/gnupg"; mkdir -m700 "$GNUPGHOME"
+        gpg --auto-key-locate nodefault,wkd --locate-keys torbrowser@torproject.org >/dev/null 2>&1 \
+            || gpg --keyserver keys.openpgp.org --recv-keys "$TBB_FPR" >/dev/null 2>&1 \
+            || { echo "Impossibile ottenere la chiave di firma." >&2; exit 4; }
+        gpg --status-fd 1 --verify "${pkg}.asc" "${pkg}" 2>/dev/null | grep -q "VALIDSIG ${TBB_FPR}" \
+            || gpg --status-fd 1 --verify "${pkg}.asc" "${pkg}" 2>/dev/null | grep -q "VALIDSIG .* ${TBB_FPR}" \
+            || { echo "FIRMA NON VALIDA: installazione annullata." >&2; exit 5; }
+        echo ">> Firma verificata. Estraggo ..."
+        rm -rf "$TBB_DIR"; mkdir -p "$TBB_DIR"
+        tar -xJf "$pkg" -C "$TBB_DIR" --strip-components=1
+        chown -R analyst:analyst "$TBB_DIR" 2>/dev/null || true
+        echo "OK: Tor Browser ${ver} installato in ${TBB_DIR}."
+        ;;
+    status)
+        printf 'tor=%s\n' "$(command -v tor >/dev/null && echo installato || echo assente)"
+        printf 'tor_attivo=%s\n' "$(systemctl is-active tor 2>/dev/null || echo inattivo)"
+        printf 'tor_browser=%s\n' "$([ -x "$TBB_DIR/Browser/start-tor-browser" ] && echo installato || echo assente)"
+        printf 'killswitch=%s\n' "$(nft list table inet cyberdistro_killswitch >/dev/null 2>&1 && echo attivo || echo inattivo)"
+        ;;
+    *)
+        echo "Uso: $0 tor | browser | status" >&2; exit 2 ;;
+esac

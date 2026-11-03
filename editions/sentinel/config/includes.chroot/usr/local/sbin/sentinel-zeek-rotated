@@ -1,0 +1,5 @@
+#!/bin/sh
+# Zeek rotation postprocessor: delete the rotated log (sentinel-core already
+# consumed it). Zeek passes the rotated file name as the first argument.
+[ -n "${1:-}" ] && rm -f -- "$1"
+exit 0
