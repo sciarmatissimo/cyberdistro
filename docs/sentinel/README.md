@@ -13,7 +13,12 @@ Studi di fattibilità: [v1](https://claude.ai/artifact/QLPXQ7jdxpCWkW1VwTiFN9) �
 Verificato in macchina virtuale (BIOS e UEFI): avvio fino all'interfaccia, motori attivi, stato
 VERDE a riposo, port scan reale rilevato con stato ROSSO, RAM totale usata ~1,05 GB. L'assistente
 AI della ISO funziona su CPU reale (25–48 s per spiegazione su 2 core). **Non ancora provato su
-hardware reale.** Dettagli: [`release/sentinel-verification-0.1.0-alpha.md`](../../release/sentinel-verification-0.1.0-alpha.md).
+hardware reale.**
+
+ISO pubblicata nella release [`sentinel-v0.1.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-v0.1.0-alpha)
+(1 890 187 264 byte, SHA-256 `51368bba0ca8b010097799fdf366e1f88fb29e1c202fd044b68d192bfab41b77`, costruita da
+GitHub Actions): scaricata e riprovata in QEMU (BIOS) il 3 novembre 2026 — avvio fino all'interfaccia,
+stato VERDE a riposo, port scan dall'host rilevato con stato ROSSO. Dettagli: [`release/sentinel-verification-0.1.0-alpha.md`](../../release/sentinel-verification-0.1.0-alpha.md).
 
 | Home in VM (UEFI) | Port scan rilevato in VM (BIOS) |
 | --- | --- |
