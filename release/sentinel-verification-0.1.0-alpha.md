@@ -1,5 +1,11 @@
 
-## Cosa è stato verificato su questa ISO (2–3 novembre 2026)
+## Cosa è stato verificato (2–3 novembre 2026)
+
+Le verifiche sotto sono state eseguite su una build locale dello **stesso commit e della stessa
+configurazione** (1 889 988 608 byte, SHA-256 `006db05bb6ad163d8580e296e60993fa3ffa0e9ba0e56ea9ecc72ab3ae7ff2fb`).
+La ISO allegata a questa release è ricostruita da GitHub Actions dallo stesso sorgente: non è
+identica byte per byte (data di build e versione giornaliera delle regole ET Open, riportata in
+`sentinel-build-info.txt`), quindi il suo SHA-256 è quello indicato in testa a queste note.
 
 | Verifica | Esito | Come |
 | --- | --- | --- |
