@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- CyberDistro Sentinel: the GUI runs these fixed helpers via pkexec.
+     Defensive actions and the Tor installer are allowed to the logged-in local
+     user without a password (they only accept validated arguments). -->
+<policyconfig>
+  <vendor>CyberDistro</vendor>
+  <action id="org.cyberdistro.sentinel.action">
+    <description>Apply or undo a Sentinel defensive action on this computer</description>
+    <message>Sentinel vuole modificare il firewall di questo computer</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>yes</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/sbin/sentinel-action</annotate>
+  </action>
+  <action id="org.cyberdistro.sentinel.install-tor">
+    <description>Install Tor or Tor Browser</description>
+    <message>Sentinel vuole installare Tor</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>yes</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/sbin/sentinel-install-tor</annotate>
+  </action>
+  <action id="org.cyberdistro.sentinel.privacy">
+    <description>Switch the privacy profile (Tor kill-switch)</description>
+    <message>Sentinel vuole cambiare il profilo di privacy</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>yes</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/sbin/sentinel-privacy</annotate>
+  </action>
+</policyconfig>

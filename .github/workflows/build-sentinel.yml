@@ -1,0 +1,93 @@
+name: Build Sentinel ISO
+
+# Builds CyberDistro Sentinel (Q3_K_M) from editions/sentinel/ in a privileged
+# Debian trixie container. Separate from build-iso.yml (PC Edition), which it
+# never touches. Manual trigger only: it does not run on tag pushes, so a
+# published Sentinel release is never replaced automatically.
+#
+# Inputs:
+#   publish_tag — if set (e.g. sentinel-v0.1.0-alpha) and that release does NOT
+#                 exist yet, create it as a pre-release and attach the ISO.
+#                 An existing release is never modified by this workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_tag:
+        description: "Create this release if absent (empty = artifact only)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-sentinel
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost \
+            /opt/hostedtoolcache "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}" || true
+          sudo docker image prune -af || true
+          df -h / | tail -1
+
+      - name: Sentinel unit tests
+        run: |
+          cd sentinel && PYTHONPATH=src python3 -m unittest discover -s tests -v
+
+      - name: Build ISO (privileged Debian container)
+        run: |
+          docker run --rm --privileged -v "$GITHUB_WORKSPACE":/work -w /work/editions/sentinel \
+            debian:trixie bash -euo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends live-build debootstrap xorriso squashfs-tools \
+                mtools dosfstools grub-pc-bin grub-efi-amd64-bin python3 wget gnupg ca-certificates \
+                cmake g++ git make binutils xz-utils
+              ./build.sh'
+
+      - name: Normalize ownership
+        if: always()
+        run: sudo chown -R "$USER" "$GITHUB_WORKSPACE" || true
+
+      - name: Release notes
+        run: ./release/make-sentinel-release.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyberdistro-sentinel-iso
+          path: |
+            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso
+            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso.sha256
+            iso/sentinel-build-info.txt
+            release/RELEASE-NOTES-sentinel-*.md
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Publish (only if the release does not exist)
+        if: github.event.inputs.publish_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.publish_tag }}
+        run: |
+          case "$TAG" in sentinel-v*) ;; *) echo "::error::tag must start with sentinel-v"; exit 1 ;; esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists: not modified."
+            exit 0
+          fi
+          VER="$(cat editions/sentinel/VERSION)"
+          gh release create "$TAG" --prerelease --target "$GITHUB_SHA" \
+            --title "CyberDistro Sentinel Q3_K_M ${VER}" \
+            --notes-file "release/RELEASE-NOTES-sentinel-${VER}.md" \
+            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso \
+            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso.sha256 \
+            iso/sentinel-build-info.txt

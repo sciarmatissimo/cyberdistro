@@ -1,0 +1,21 @@
+#!/bin/sh
+# CyberDistro Sentinel: live user "analyst" (GUI) and system user "sentinel"
+# (engines' log reader, correlation daemon, sensor). Same live credentials as
+# the PC Edition: analyst / cyberdistro.
+set -e
+id sentinel >/dev/null 2>&1 || useradd --system --home-dir /var/lib/sentinel --shell /usr/sbin/nologin sentinel
+if ! id analyst >/dev/null 2>&1; then
+    useradd -m -s /bin/bash -c "CyberDistro Analyst" analyst
+fi
+echo "analyst:cyberdistro" | chpasswd
+passwd -u analyst 2>/dev/null || true
+for g in sudo netdev plugdev video render input users sentinel; do
+    getent group "$g" >/dev/null 2>&1 && usermod -aG "$g" analyst || true
+done
+echo sentinel > /etc/hostname
+grep -q '127.0.1.1[[:space:]]\+sentinel' /etc/hosts 2>/dev/null || echo "127.0.1.1 sentinel" >> /etc/hosts
+sed -i 's/^# *\(it_IT.UTF-8 UTF-8\)/\1/; s/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen
+locale-gen >/dev/null
+printf 'LANG=it_IT.UTF-8\n' > /etc/default/locale
+printf 'XKBMODEL="pc105"\nXKBLAYOUT="it"\n' > /etc/default/keyboard
+echo "I: users ready (analyst in group sentinel)"

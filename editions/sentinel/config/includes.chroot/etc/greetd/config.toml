@@ -1,0 +1,11 @@
+# CyberDistro Sentinel — log the live user straight into the kiosk session.
+[terminal]
+vt = 7
+
+[initial_session]
+command = "labwc"
+user = "analyst"
+
+[default_session]
+command = "agreety --cmd labwc"
+user = "_greetd"

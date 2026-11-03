@@ -50,6 +50,14 @@ jobs:
       - name: Run full test suite (needs root for nft -c)
         run: sudo ./tests/run-all.sh
 
+      - name: CyberDistro Sentinel — unit tests and GUI smoke test
+        run: |
+          cd sentinel
+          PYTHONPATH=src python3 -m unittest discover -s tests -v
+          QT_QPA_PLATFORM=offscreen PYTHONPATH=src python3 tests/gui_smoke.py /tmp/sentinel-shots
+          for f in ../editions/sentinel/build.sh ../editions/sentinel/config/hooks/live/* \
+                   ../editions/sentinel/config/includes.chroot/usr/local/sbin/*; do bash -n "$f"; done
+
       - name: Fix result ownership for upload
         if: always()
         run: sudo chown -R "$USER" tests sbom || true

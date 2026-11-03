@@ -1,0 +1,2 @@
+# CyberDistro Sentinel: smaller initrd (measured 120 -> ~58 MB in the study).
+COMPRESS=xz

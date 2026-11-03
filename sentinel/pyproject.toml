@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberdistro-sentinel"
+version = "0.1.0"
+description = "CyberDistro Sentinel — passive network monitoring, deterministic correlation and a local AI explainer"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "CyberDistro project contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.6"]
+
+[project.scripts]
+sentinel-core = "cyberdistro_sentinel.daemon:main"
+sentinel-sensor = "cyberdistro_sentinel.sensor:main"
+sentinel = "cyberdistro_sentinel.cli:main"
+sentinel-gui = "cyberdistro_sentinel.gui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

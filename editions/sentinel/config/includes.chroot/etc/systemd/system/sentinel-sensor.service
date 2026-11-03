@@ -1,0 +1,23 @@
+[Unit]
+Description=CyberDistro Sentinel: passive ARP/DHCP/mDNS sensor (listen-only)
+After=network.target
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+ExecStart=/usr/local/bin/sentinel-sensor --out /var/lib/sentinel/sensor.jsonl
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/sentinel
+StateDirectory=sentinel
+StateDirectoryMode=0770
+UMask=0007
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

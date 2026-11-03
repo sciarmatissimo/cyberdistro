@@ -1,0 +1,13 @@
+#!/bin/sh
+# Safe defaults (same principles as the PC Edition): no listening services,
+# volatile journal, password-gated sudo.
+set -e
+for svc in ssh sshd avahi-daemon cups cups-browsed rpcbind; do
+    systemctl disable "${svc}.service" 2>/dev/null || true
+    systemctl disable "${svc}.socket" 2>/dev/null || true
+done
+sed -i 's/^%sudo.*NOPASSWD.*$/# removed passwordless sudo/' /etc/sudoers 2>/dev/null || true
+mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=64M\n' > /etc/systemd/journald.conf.d/00-sentinel.conf
+systemctl set-default graphical.target
+echo "I: hardening done"

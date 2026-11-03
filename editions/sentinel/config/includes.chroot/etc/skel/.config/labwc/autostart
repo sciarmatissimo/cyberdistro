@@ -1,0 +1,2 @@
+# CyberDistro Sentinel kiosk: the Security Center is the desktop.
+sentinel-gui >/tmp/sentinel-gui.log 2>&1 &

@@ -1,0 +1,9 @@
+# Debian stays the system of record. From the Zeek OBS archive we accept only
+# the Zeek 9.0 core package (pinned major version).
+Package: *
+Pin: origin download.opensuse.org
+Pin-Priority: 100
+
+Package: zeek-9.0-core
+Pin: origin download.opensuse.org
+Pin-Priority: 990

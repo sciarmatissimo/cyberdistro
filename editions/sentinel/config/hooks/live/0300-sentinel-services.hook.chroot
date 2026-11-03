@@ -1,0 +1,28 @@
+#!/bin/sh
+# Engines run under our supervisor on the default-route interface; Debian's own
+# suricata.service (fixed to eth0) is disabled.
+set -e
+systemctl disable suricata.service 2>/dev/null || true
+systemctl mask suricata.service 2>/dev/null || true
+for u in sentinel-engines.service sentinel-sensor.service sentinel-core.service sentinel-logcap.timer greetd.service; do
+    systemctl enable "$u"
+done
+mkdir -p /var/lib/sentinel /var/log/suricata /var/log/zeek/current
+chown sentinel:sentinel /var/lib/sentinel
+chmod 2770 /var/lib/sentinel
+chgrp sentinel /var/log/suricata /var/log/zeek/current
+chmod 2750 /var/log/suricata /var/log/zeek/current
+# NetworkManager: random MAC while scanning Wi-Fi (privacy), stable per network
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/00-sentinel.conf <<'NM'
+[device]
+wifi.scan-rand-mac-address=yes
+[connection]
+wifi.cloned-mac-address=stable
+ethernet.cloned-mac-address=preserve
+NM
+echo "I: services enabled"
+# Validate the shipped rule set and configuration (fails the build if broken).
+suricata -T -c /etc/suricata/sentinel.yaml -S /etc/suricata/rules/sentinel.rules -l /tmp >/tmp/suricata-test.log 2>&1 \
+    || { tail -30 /tmp/suricata-test.log; echo "E: Suricata configuration test failed"; exit 1; }
+echo "I: Suricata rule set loads: $(grep -c '^alert' /etc/suricata/rules/sentinel.rules) rules"

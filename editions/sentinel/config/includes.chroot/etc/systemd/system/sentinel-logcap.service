@@ -1,0 +1,6 @@
+[Unit]
+Description=CyberDistro Sentinel: keep engine logs bounded
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sentinel-logcap

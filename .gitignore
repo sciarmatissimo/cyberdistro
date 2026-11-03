@@ -37,3 +37,7 @@ build/config/includes.chroot/opt/cyberdistro-src/
 build/config/includes.chroot/usr/share/cyberdistro/
 build/config/includes.chroot/usr/share/plasma/
 security-center/build/
+
+# CyberDistro Sentinel release outputs (published as release assets)
+iso/CyberDistro-Sentinel-*
+iso/sentinel-build-info.txt

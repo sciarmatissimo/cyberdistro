@@ -1,0 +1,32 @@
+#!/bin/sh
+# live-build auto/config — CyberDistro Sentinel (Q3_K_M)
+# Separate profile from the PC Edition (build/). Differences, from the
+# feasibility study v2:
+#   * firmware is listed explicitly in package-lists (no --firmware-* auto
+#     selection, which pulls in datacenter firmware such as Netronome/Marvell);
+#   * no Kali archive, no KDE, no Tor (Tor is installable from the GUI);
+#   * Zeek comes from the Zeek project's OBS repository (config/archives).
+set -e
+
+lb config noauto \
+    --mode debian \
+    --distribution trixie \
+    --architectures amd64 \
+    --linux-flavours amd64 \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --compression xz \
+    --chroot-squashfs-compression-type xz \
+    --debian-installer none \
+    --bootloaders "grub-efi grub-pc" \
+    --uefi-secure-boot disable \
+    --iso-application "CyberDistro Sentinel" \
+    --iso-publisher "CyberDistro Project" \
+    --iso-volume "CDSentinel-$(cat ../VERSION 2>/dev/null || echo 0.1.0)" \
+    --memtest none \
+    --apt-recommends false \
+    --apt-indices false \
+    --firmware-chroot false \
+    --firmware-binary false \
+    --win32-loader false \
+    --bootappend-live "boot=live components quiet splash noeject username=analyst hostname=sentinel locales=it_IT.UTF-8 keyboard-layouts=it" \
+    "${@}"

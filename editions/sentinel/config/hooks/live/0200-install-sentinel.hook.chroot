@@ -1,0 +1,26 @@
+#!/bin/sh
+# Install the Sentinel Python package, the privacy scripts shared with the PC
+# Edition, the Zeek site policy and the llama.cpp runtime permissions.
+set -e
+SRC=/opt/cyberdistro-src
+# No pip in the image: install the pure-Python package and its entry points directly.
+rm -rf /usr/lib/python3/dist-packages/cyberdistro_sentinel
+cp -a "$SRC/sentinel/src/cyberdistro_sentinel" /usr/lib/python3/dist-packages/
+python3 -m compileall -q /usr/lib/python3/dist-packages/cyberdistro_sentinel
+for ep in "sentinel-core:daemon" "sentinel-sensor:sensor" "sentinel:cli" "sentinel-gui:gui.app"; do
+    name="${ep%%:*}"; mod="${ep#*:}"
+    printf '#!/usr/bin/python3\nimport sys\nfrom cyberdistro_sentinel.%s import main\nsys.exit(main())\n' "$mod" > "/usr/local/bin/$name"
+    chmod 755 "/usr/local/bin/$name"
+done
+python3 -c "import cyberdistro_sentinel.daemon, cyberdistro_sentinel.sensor, cyberdistro_sentinel.assistant"
+install -D -m755 "$SRC/privacy/bin/privacy-mode" /usr/local/sbin/privacy-mode
+install -D -m644 "$SRC/privacy/nftables/killswitch.nft" /usr/share/cyberdistro/privacy/killswitch.nft
+install -D -m755 "$SRC/privacy/persistence/make-persistence.sh" /usr/local/sbin/cyberdistro-make-persistence
+install -D -m644 /opt/zeek-site/sentinel.zeek /opt/zeek/share/zeek/site/sentinel.zeek
+rm -rf /opt/zeek-site "$SRC"
+# Zeek: keep only what the core needs at runtime
+rm -rf /opt/zeek/share/zeek/base/files/x509/ca-bundle* /opt/zeek/include 2>/dev/null || true
+chmod 755 /opt/cyberdistro/llama/llama-server
+chmod 644 /opt/cyberdistro/models/*.gguf
+sha256sum -c /opt/cyberdistro/models/SHA256SUMS
+echo "I: Sentinel installed"

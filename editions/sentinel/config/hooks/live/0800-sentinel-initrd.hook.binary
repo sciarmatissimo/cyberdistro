@@ -1,0 +1,12 @@
+#!/bin/sh
+# Binary-stage hook (runs after chroot_hacks regenerated the initrd): slim the
+# live initrd with the script installed in the chroot. Fails the build if the
+# result is missing /init or live-boot.
+set -e
+for img in live/initrd.img-*; do
+    kver="${img#live/initrd.img-}"
+    cp "$img" ../chroot/tmp/initrd.img
+    chroot ../chroot /usr/local/sbin/sentinel-slim-initrd /tmp/initrd.img "$kver"
+    cp ../chroot/tmp/initrd.img "$img"
+    rm -f ../chroot/tmp/initrd.img
+done

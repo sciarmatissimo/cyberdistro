@@ -33,6 +33,15 @@ USB e avvio: `docs/beginner/guida-principianti.md` (§3). Secure Boot va disatti
 firmata in alpha). Non usare "Download ZIP" del repository: contiene solo i
 sorgenti, non la ISO.
 
+### Edizione separata: CyberDistro Sentinel Q3_K_M
+
+Monitoraggio **passivo** della rete (Suricata + Zeek + sensore ARP/DHCP/mDNS),
+correlazione deterministica con stato verde/giallo/rosso/grigio e assistente AI
+**locale** (Qwen3.5-2B Q3_K_M con llama.cpp), in una ISO sotto i 2 000 MB.
+Tor non è incluso: si installa dalla sezione Privacy. Release con tag
+`sentinel-v*`; build in `editions/sentinel/`, documentazione in
+[`docs/sentinel/README.md`](docs/sentinel/README.md). Non modifica la PC Edition.
+
 ---
 
 ## Principio guida

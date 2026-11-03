@@ -1,0 +1,86 @@
+# CyberDistro Sentinel — package list.
+# Sizes and the reasons for each choice: docs/sentinel/feasibility-v2.md
+
+# --- live system, boot, persistence
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+linux-image-amd64
+cryptsetup
+cryptsetup-initramfs
+sudo
+polkitd
+pkexec
+dbus
+locales
+less
+nano
+ca-certificates
+systemd-timesyncd
+
+# --- networking (NetworkManager is driven from the Sentinel GUI with nmcli)
+network-manager
+nftables
+iproute2
+iw
+wpasupplicant
+wireless-regdb
+rfkill
+udisks2
+
+# --- layer 1: engines and sensors
+suricata
+tcpdump
+nmap
+arp-scan
+ieee-data
+# Zeek 9.0 core comes from the Zeek OBS archive (config/archives/zeek.*)
+zeek-9.0-core
+
+# --- layer 2/3 runtime
+python3
+
+# --- on-demand installers (Tor, Tor Browser) need these at runtime
+wget
+gnupg
+xz-utils
+
+# --- kiosk GUI: labwc (Wayland) + PySide6, no full desktop
+labwc
+greetd
+foot
+qt6-wayland
+python3-pyside6.qtcore
+python3-pyside6.qtgui
+python3-pyside6.qtwidgets
+fonts-dejavu-core
+adwaita-icon-theme
+
+# --- firmware: everything a PC or laptop needs, WITHOUT datacenter firmware
+# (excluded: firmware-netronome, firmware-marvell-prestera, firmware-qlogic,
+#  firmware-bnx2, firmware-bnx2x, firmware-cavium, firmware-myricom,
+#  firmware-netxen, firmware-nvidia-tesla-*-gsp; firmware-ipw2x00 needs an
+#  interactive licence agreement and only serves 2003-era Intel PRO/Wireless)
+firmware-amd-graphics
+firmware-ast
+firmware-ath9k-htc
+firmware-atheros
+firmware-brcm80211
+firmware-carl9170
+firmware-cirrus
+firmware-intel-graphics
+firmware-intel-misc
+firmware-intel-sound
+firmware-iwlwifi
+firmware-libertas
+firmware-linux-free
+firmware-mediatek
+firmware-misc-nonfree
+firmware-nvidia-graphics
+firmware-realtek
+firmware-sof-signed
+firmware-ti-connectivity
+firmware-zd1211
+amd64-microcode
+intel-microcode

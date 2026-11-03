@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<openbox_menu>
+  <menu id="root-menu" label="Sentinel">
+    <item label="Security Center Sentinel"><action name="Execute" command="sentinel-gui"/></item>
+    <item label="Terminale (utenti esperti)"><action name="Execute" command="foot"/></item>
+    <separator/>
+    <item label="Riavvia"><action name="Execute" command="systemctl reboot"/></item>
+    <item label="Spegni"><action name="Execute" command="systemctl poweroff"/></item>
+  </menu>
+</openbox_menu>

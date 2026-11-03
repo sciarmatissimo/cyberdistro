@@ -1,0 +1,25 @@
+[Unit]
+Description=CyberDistro Sentinel: correlation, incident database, status
+After=sentinel-sensor.service sentinel-engines.service
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+ExecStart=/usr/local/bin/sentinel-core
+StateDirectory=sentinel
+StateDirectoryMode=0770
+RuntimeDirectory=sentinel
+RuntimeDirectoryMode=0755
+UMask=0007
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+IPAddressDeny=any
+ReadWritePaths=/var/lib/sentinel
+CapabilityBoundingSet=
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,4 @@
+# Suricata SIDs removed from the Sentinel rule set (one per line, # comments).
+# Each entry needs a reason; tuning on real networks happens in roadmap phase 7.
+2009295  # ET HUNTING Suspicious Mozilla User-Agent Likely Fake — 3000 false positives on the synthetic baseline traffic
+2030387  # ET EXPLOIT Possible CVE-2020-11899 (Ripple20) Multicast out-of-bound read — fires on ordinary IPv6 MLD/NDP: turned a QEMU test boot RED with no attack; reproduced with sentinel/tests/make_benign_pcap.py
