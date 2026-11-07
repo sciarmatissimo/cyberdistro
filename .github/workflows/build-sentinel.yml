@@ -1,18 +1,27 @@
 name: Build Sentinel ISO
 
 # Builds CyberDistro Sentinel (Q3_K_M) from editions/sentinel/ in a privileged
-# Debian trixie container. Separate from build-iso.yml (PC Edition), which it
-# never touches. Manual trigger only: it does not run on tag pushes, so a
-# published Sentinel release is never replaced automatically.
+# Debian trixie container. Two flavours:
+#   kiosk — the Security Center is the whole session (no desktop)
+#   lite  — the same system plus a light LXQt desktop
+# Separate from build-iso.yml (PC Edition), which it never touches. Manual
+# trigger only: a published release is never replaced automatically.
 #
 # Inputs:
-#   publish_tag — if set (e.g. sentinel-v0.1.0-alpha) and that release does NOT
-#                 exist yet, create it as a pre-release and attach the ISO.
-#                 An existing release is never modified by this workflow.
+#   flavour     — kiosk | lite
+#   publish_tag — if set and that release does NOT exist yet, create it as a
+#                 pre-release and attach the ISO. Kiosk tags start with
+#                 sentinel-v, Lite tags with sentinel-lite-v. An existing
+#                 release is never modified by this workflow.
 
 on:
   workflow_dispatch:
     inputs:
+      flavour:
+        description: "Flavour to build"
+        type: choice
+        options: [kiosk, lite]
+        default: kiosk
       publish_tag:
         description: "Create this release if absent (empty = artifact only)"
         type: string
@@ -22,13 +31,15 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-sentinel
+  group: build-sentinel-${{ github.event.inputs.flavour }}
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 200
+    env:
+      FLAVOUR: ${{ github.event.inputs.flavour }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,31 +56,41 @@ jobs:
 
       - name: Build ISO (privileged Debian container)
         run: |
-          docker run --rm --privileged -v "$GITHUB_WORKSPACE":/work -w /work/editions/sentinel \
+          docker run --rm --privileged -e FLAVOUR -v "$GITHUB_WORKSPACE":/work -w /work/editions/sentinel \
             debian:trixie bash -euo pipefail -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get install -y --no-install-recommends live-build debootstrap xorriso squashfs-tools \
                 mtools dosfstools grub-pc-bin grub-efi-amd64-bin python3 wget gnupg ca-certificates \
                 cmake g++ git make binutils xz-utils
-              ./build.sh'
+              ./build.sh --flavour "$FLAVOUR"'
 
       - name: Normalize ownership
         if: always()
         run: sudo chown -R "$USER" "$GITHUB_WORKSPACE" || true
 
       - name: Release notes
-        run: ./release/make-sentinel-release.sh
+        run: ./release/make-sentinel-release.sh "$FLAVOUR"
+
+      - name: Names
+        id: n
+        run: |
+          case "$FLAVOUR" in
+            kiosk) echo "name=Kiosk" >> "$GITHUB_OUTPUT"; echo "prefix=sentinel-v" >> "$GITHUB_OUTPUT"
+                   echo "ver=$(cat editions/sentinel/VERSION)" >> "$GITHUB_OUTPUT" ;;
+            lite)  echo "name=Lite" >> "$GITHUB_OUTPUT"; echo "prefix=sentinel-lite-v" >> "$GITHUB_OUTPUT"
+                   echo "ver=$(cat editions/sentinel/flavours/lite/VERSION)" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cyberdistro-sentinel-iso
+          name: cyberdistro-sentinel-${{ env.FLAVOUR }}-iso
           path: |
-            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso
-            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso.sha256
-            iso/sentinel-build-info.txt
-            release/RELEASE-NOTES-sentinel-*.md
+            iso/CyberDistro-Sentinel-${{ steps.n.outputs.name }}-Q3_K_M-x86_64.iso
+            iso/CyberDistro-Sentinel-${{ steps.n.outputs.name }}-Q3_K_M-x86_64.iso.sha256
+            iso/sentinel-${{ env.FLAVOUR }}-build-info.txt
+            release/RELEASE-NOTES-sentinel-${{ env.FLAVOUR }}-*.md
           retention-days: 14
           if-no-files-found: error
 
@@ -78,16 +99,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.publish_tag }}
+          NAME: ${{ steps.n.outputs.name }}
+          PREFIX: ${{ steps.n.outputs.prefix }}
+          VER: ${{ steps.n.outputs.ver }}
         run: |
-          case "$TAG" in sentinel-v*) ;; *) echo "::error::tag must start with sentinel-v"; exit 1 ;; esac
+          case "$TAG" in "$PREFIX"*) ;; *) echo "::error::$FLAVOUR tags must start with $PREFIX"; exit 1 ;; esac
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "::notice::Release $TAG already exists: not modified."
             exit 0
           fi
-          VER="$(cat editions/sentinel/VERSION)"
           gh release create "$TAG" --prerelease --target "$GITHUB_SHA" \
-            --title "CyberDistro Sentinel Q3_K_M ${VER}" \
-            --notes-file "release/RELEASE-NOTES-sentinel-${VER}.md" \
-            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso \
-            iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso.sha256 \
-            iso/sentinel-build-info.txt
+            --title "CyberDistro Sentinel ${NAME} Q3_K_M ${VER}" \
+            --notes-file "release/RELEASE-NOTES-sentinel-${FLAVOUR}-${VER}.md" \
+            "iso/CyberDistro-Sentinel-${NAME}-Q3_K_M-x86_64.iso" \
+            "iso/CyberDistro-Sentinel-${NAME}-Q3_K_M-x86_64.iso.sha256" \
+            "iso/sentinel-${FLAVOUR}-build-info.txt"

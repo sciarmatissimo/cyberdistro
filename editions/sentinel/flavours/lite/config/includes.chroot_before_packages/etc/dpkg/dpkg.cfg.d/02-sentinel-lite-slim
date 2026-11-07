@@ -1,0 +1,4 @@
+# Sentinel Lite: Qt translation catalogues of LXQt and its apps, Italian only.
+path-exclude /usr/share/*/translations/*.qm
+path-include /usr/share/*/translations/*_it.qm
+path-include /usr/share/qt6/translations/*_en.qm

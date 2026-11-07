@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, QPointF, QRectF
-from PySide6.QtGui import QColor, QFont, QPainter, QPen, QBrush
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QBrush
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame,
                                QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
                                QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QScrollArea,
@@ -819,16 +819,12 @@ class Main(QMainWindow):
         if not nets:
             QMessageBox.information(self, "Wi-Fi", "Nessuna rete Wi-Fi trovata. Se usi il cavo, la connessione è automatica.")
             return
-        names = [f"{s}  ({sig}%){'  🔒' if sec and sec != '--' else ''}" for s, sig, sec in nets]
-        sel, ok = QInputDialog.getItem(self, "Connetti a una rete", "Rete Wi-Fi:", names, 0, False)
-        if not ok:
+        dlg = WifiDialog(nets, self)
+        if dlg.exec() != QDialog.Accepted or dlg.choice() is None:
             return
-        ssid, _sig, sec = nets[names.index(sel)]
+        ssid, sec, pw = dlg.choice()
         cmd = ["nmcli", "device", "wifi", "connect", ssid]
-        if sec and sec != "--":
-            pw, ok = QInputDialog.getText(self, "Password", f"Password di «{ssid}»:", QLineEdit.Password)
-            if not ok:
-                return
+        if sec:
             cmd += ["password", pw]
         code, out = run(cmd, 60)
         QMessageBox.information(self, "Wi-Fi", "Connesso." if code == 0 else f"Connessione non riuscita.\n{out}")
@@ -951,10 +947,60 @@ class Main(QMainWindow):
         super().closeEvent(ev)
 
 
+
+class WifiDialog(QDialog):
+    """Wi-Fi picker: a normal-sized dialog with Italian buttons and no emoji
+    (the kiosk font has no emoji glyphs; QInputDialog showed English buttons)."""
+
+    def __init__(self, nets, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Connetti a una rete Wi-Fi")
+        self.setMinimumSize(460, 380)
+        self.nets = [(s, sig, bool(sec and sec != "--")) for s, sig, sec in nets]
+        v = QVBoxLayout(self)
+        v.addWidget(QLabel("Scegli la rete:"))
+        self.lst = QListWidget()
+        for s, sig, sec in self.nets:
+            self.lst.addItem(QListWidgetItem(f"{s}    segnale {sig}%    {'protetta' if sec else 'aperta'}"))
+        self.lst.setCurrentRow(0)
+        v.addWidget(self.lst, 1)
+        self.pwl = QLabel("Password:")
+        self.pw = QLineEdit()
+        self.pw.setEchoMode(QLineEdit.Password)
+        v.addWidget(self.pwl)
+        v.addWidget(self.pw)
+        self.show_pw = QCheckBox("Mostra la password")
+        self.show_pw.toggled.connect(lambda on: self.pw.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password))
+        v.addWidget(self.show_pw)
+        bb = QDialogButtonBox()
+        self.ok = bb.addButton("Connetti", QDialogButtonBox.AcceptRole)
+        bb.addButton("Annulla", QDialogButtonBox.RejectRole)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        v.addWidget(bb)
+        self.lst.currentRowChanged.connect(self._sync)
+        self.lst.itemDoubleClicked.connect(lambda _i: self.accept())
+        self._sync()
+
+    def _sync(self, *_):
+        row = self.lst.currentRow()
+        sec = row >= 0 and self.nets[row][2]
+        for w in (self.pwl, self.pw, self.show_pw):
+            w.setVisible(bool(sec))
+
+    def choice(self):
+        row = self.lst.currentRow()
+        if row < 0:
+            return None
+        s, _sig, sec = self.nets[row]
+        return s, sec, self.pw.text()
+
+
 def main(argv=None) -> int:
     app = QApplication(sys.argv if argv is None else argv)
     app.setApplicationName("Security Center Sentinel")
     app.setDesktopFileName("sentinel-gui")
+    app.setWindowIcon(QIcon.fromTheme("security-high"))
     app.setStyleSheet(CSS)
     w = Main()
     w.showMaximized()

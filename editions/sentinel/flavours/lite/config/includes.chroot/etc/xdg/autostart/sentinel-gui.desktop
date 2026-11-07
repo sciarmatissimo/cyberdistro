@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Security Center Sentinel
+Comment=Apre il Security Center all'avvio del desktop
+Exec=sentinel-gui
+Icon=security-high
+X-LXQt-Need-Tray=false

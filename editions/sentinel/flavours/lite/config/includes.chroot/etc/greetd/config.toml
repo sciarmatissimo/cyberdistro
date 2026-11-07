@@ -1,0 +1,12 @@
+# CyberDistro Sentinel Lite — log the live user straight into the LXQt desktop.
+# LXQt runs on Xorg; startx starts the server rootless on greetd's VT (logind).
+[terminal]
+vt = 7
+
+[initial_session]
+command = "startx /usr/bin/startlxqt -- -keeptty"
+user = "analyst"
+
+[default_session]
+command = "agreety --cmd 'startx /usr/bin/startlxqt -- -keeptty'"
+user = "_greetd"

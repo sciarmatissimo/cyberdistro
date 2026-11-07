@@ -21,9 +21,9 @@ lb config noauto \
     --debian-installer none \
     --bootloaders "grub-efi grub-pc" \
     --uefi-secure-boot enable \
-    --iso-application "CyberDistro Sentinel" \
+    --iso-application "${SENTINEL_ISO_APPLICATION:-CyberDistro Sentinel}" \
     --iso-publisher "CyberDistro Project" \
-    --iso-volume "CDSentinel-$(cat VERSION 2>/dev/null || echo dev)" \
+    --iso-volume "${SENTINEL_ISO_VOLUME:-CDSentinel-$(cat VERSION 2>/dev/null || echo dev)}" \
     --memtest none \
     --apt-recommends false \
     --apt-indices false \

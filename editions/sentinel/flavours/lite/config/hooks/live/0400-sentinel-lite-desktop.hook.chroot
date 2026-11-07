@@ -1,0 +1,19 @@
+#!/bin/sh
+# Sentinel Lite: mark the flavour, set Firefox as the default browser,
+# check that the desktop session pieces are in place (fails the build if not).
+set -e
+echo lite > /etc/cyberdistro-sentinel-flavour
+# live-config's "xinit" component would add a profile script that runs a second
+# startx on tty1 (autologin console) next to the greetd session; two LXQt
+# sessions of the same user on one D-Bus break the greetd one (black screen on
+# VT7). The component skips itself when this file already exists.
+cat > /etc/profile.d/zz-live-config_xinit.sh <<'XI'
+# CyberDistro Sentinel Lite: the desktop is started by greetd on VT7, not from tty1.
+XI
+for f in /usr/bin/startx /usr/bin/startlxqt /usr/bin/xfwm4 /usr/bin/lxqt-panel /usr/bin/pcmanfm-qt \
+         /usr/bin/qterminal /usr/bin/nm-tray /usr/bin/firefox-esr /usr/lib/xorg/Xorg; do
+    [ -x "$f" ] || { echo "E: Sentinel Lite: missing $f"; exit 1; }
+done
+update-alternatives --set x-www-browser /usr/bin/firefox-esr 2>/dev/null || true
+update-alternatives --set x-terminal-emulator /usr/bin/qterminal 2>/dev/null || true
+echo "I: Sentinel Lite desktop (LXQt + xfwm4 on Xorg) in place"

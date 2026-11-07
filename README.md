@@ -33,13 +33,25 @@ USB e avvio: `docs/beginner/guida-principianti.md` (§3). Secure Boot va disatti
 firmata in alpha). Non usare "Download ZIP" del repository: contiene solo i
 sorgenti, non la ISO.
 
-### Edizione separata: CyberDistro Sentinel Q3_K_M
+### Edizione separata: CyberDistro Sentinel Q3_K_M — Kiosk e Lite
 
 Monitoraggio **passivo** della rete (Suricata + Zeek + sensore ARP/DHCP/mDNS),
 correlazione deterministica con stato verde/giallo/rosso/grigio e assistente AI
-**locale** (Qwen3.5-2B Q3_K_M con llama.cpp), in una ISO sotto i 2 000 MB.
-Tor non è incluso: si installa dalla sezione Privacy. Release con tag
-`sentinel-v*`; build in `editions/sentinel/`, documentazione in
+**locale** (Qwen3.5-2B Q3_K_M con llama.cpp). Tor non è incluso: si installa dalla
+sezione Privacy. Disponibile in **due versioni**, scegli quella che ti serve:
+
+| | **Sentinel Kiosk** | **Sentinel Lite** |
+| --- | --- | --- |
+| All'avvio | solo il Security Center, a schermo intero | desktop leggero LXQt con il Security Center aperto |
+| Applicazioni in più | nessuna | file manager, terminale, editor di testo, Firefox |
+| Monitoraggio, AI locale, report | sì | sì, identici |
+| Scegli se… | vuoi solo controllare la rete, nel modo più semplice | vuoi anche navigare, gestire file, usare il terminale |
+| Release | tag `sentinel-v*` (es. [`sentinel-v0.1.1-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-v0.1.1-alpha)) | tag `sentinel-lite-v*` (es. [`sentinel-lite-v0.1.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.1.0-alpha)) |
+| Dimensione ISO | < 2 000 MB | < 2 GiB |
+
+Entrambe: chiavetta USB da 4 GB, PC x86-64 con 4 GB di RAM (8 GB per l'assistente AI),
+avvio UEFI con Secure Boot attivo oppure BIOS. Build in `editions/sentinel/`
+(`./build.sh --flavour kiosk|lite`), documentazione in
 [`docs/sentinel/README.md`](docs/sentinel/README.md). Non modifica la PC Edition.
 
 ---

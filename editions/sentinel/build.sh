@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# CyberDistro Sentinel (Q3_K_M) — build entrypoint.
+# CyberDistro Sentinel (Q3_K_M) — build entrypoint, two flavours:
+#   kiosk  the Security Center is the whole session (labwc kiosk) — ISO < 2 000 000 000 bytes
+#   lite   the same system plus a light LXQt desktop (Xorg, xfwm4, file manager,
+#          terminal, Firefox) — ISO < 2 GiB, the GitHub per-file release limit
+#
+#   ./build.sh [--flavour kiosk|lite] [--clean]
+#
+# Each flavour is built in its own work dir (work/<flavour>): a copy of the shared
+# profile (auto/, config/) with flavours/<flavour>/config copied on top.
 #
 # Run as root inside a Debian 13 (trixie) environment that allows chroot/mount,
 # e.g.:  docker run --rm --privileged -v "$PWD":/work -w /work/editions/sentinel \
@@ -12,17 +20,33 @@
 #   4. build llama.cpp (pinned commit, CPU-only, all x86-64 variants);
 #   5. fetch Qwen3.5-2B Q3_K_M (pinned revision) and check its SHA-256;
 #   6. lb config + lb build;
-#   7. fail if the ISO is not below 2 000 000 000 bytes.
+#   7. boot checks, then fail if the ISO is not below the flavour's limit.
 #
-# Output: ../../iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso (+ .sha256)
+# Output: ../../iso/CyberDistro-Sentinel-{Kiosk,Lite}-Q3_K_M-x86_64.iso (+ .sha256)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
-VERSION="$(cat "$HERE/VERSION")"
-OUT="$ROOT/iso/CyberDistro-Sentinel-Q3_K_M-x86_64.iso"
+FLAVOUR=kiosk; CLEAN=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --flavour) FLAVOUR="$2"; shift 2 ;;
+        --flavour=*) FLAVOUR="${1#*=}"; shift ;;
+        --clean) CLEAN=1; shift ;;
+        *) echo "usage: $0 [--flavour kiosk|lite] [--clean]" >&2; exit 2 ;;
+    esac
+done
+case "$FLAVOUR" in
+    kiosk) NAME="Kiosk"; LIMIT=2000000000; VOLID="CDSentinel" ;;
+    lite)  NAME="Lite";  LIMIT=2147483648; VOLID="CDSentLite" ;;
+    *) echo "unknown flavour: $FLAVOUR (kiosk|lite)" >&2; exit 2 ;;
+esac
+FDIR="$HERE/flavours/$FLAVOUR"
+VERSION="$(cat "$FDIR/VERSION" 2>/dev/null || cat "$HERE/VERSION")"
+OUT="$ROOT/iso/CyberDistro-Sentinel-${NAME}-Q3_K_M-x86_64.iso"
+INFO="$ROOT/iso/sentinel-${FLAVOUR}-build-info.txt"
 CACHE="${SENTINEL_CACHE:-$HERE/cache}"
-LIMIT=2000000000
+WORK="$HERE/work/$FLAVOUR"
 
 # Pinned inputs
 LLAMA_COMMIT="29c720eaf72fcf8e4e61a56a88b994d92668261d"
@@ -41,7 +65,19 @@ for c in lb wget gpg python3 cmake g++ git sha256sum xorriso mdir; do
     command -v "$c" >/dev/null || die "missing tool: $c"
 done
 mkdir -p "$CACHE"
-cd "$HERE"
+
+# 0) work dir: shared profile + flavour overlay ------------------------------------
+log "flavour $FLAVOUR ($NAME) $VERSION — work dir $WORK"
+mkdir -p "$WORK"
+cd "$WORK"
+if [ "$CLEAN" = 1 ]; then lb clean --all >/dev/null 2>&1 || true; fi
+rm -rf auto config
+cp -a "$HERE/auto" "$HERE/config" .
+[ -d "$FDIR/config" ] && cp -a "$FDIR/config/." config/
+echo "$VERSION" > VERSION
+# live-build's package cache is shared by the flavours (same Debian archive).
+[ -e cache ] || ln -s ../../cache cache
+export SENTINEL_ISO_VOLUME="${VOLID}-${VERSION}" SENTINEL_ISO_APPLICATION="CyberDistro Sentinel ${NAME}"
 INC="config/includes.chroot"
 
 # 1) sources ---------------------------------------------------------------
@@ -113,7 +149,6 @@ EOF
 install -D -m644 /usr/share/grub/unicode.pf2 config/includes.binary/boot/grub/fonts/unicode.pf2
 
 # 7) live-build --------------------------------------------------------------------
-if [ "${1:-}" = "--clean" ]; then lb clean --purge || true; fi
 log "lb config"
 lb config
 log "lb build (tens of minutes)"
@@ -137,12 +172,13 @@ log "boot checks OK (shim + signed GRUB in efi.img, GRUB font present)"
 # 9) size gate -----------------------------------------------------------------------
 SIZE="$(stat -c%s "$OUT")"
 log "ISO size: $SIZE bytes (limit $LIMIT)"
-[ "$SIZE" -lt "$LIMIT" ] || die "ISO exceeds the 2 000 MB limit: $SIZE bytes"
+[ "$SIZE" -lt "$LIMIT" ] || die "ISO exceeds the $FLAVOUR limit ($LIMIT bytes): $SIZE bytes"
 ( cd "$ROOT/iso" && sha256sum "$(basename "$OUT")" > "$(basename "$OUT").sha256" )
-cat > "$ROOT/iso/sentinel-build-info.txt" <<EOF
-edition: CyberDistro Sentinel Q3_K_M
+cat > "$INFO" <<EOF
+edition: CyberDistro Sentinel ${NAME} Q3_K_M
+flavour: $FLAVOUR
 version: $VERSION
-iso_bytes: $SIZE
+iso_bytes: $SIZE (limit $LIMIT)
 llama_cpp: $LLAMA_COMMIT
 model: $MODEL_REPO@$MODEL_REV/$MODEL_FILE sha256=$MODEL_SHA256
 suricata_rules: ET Open $ET_VERSION
