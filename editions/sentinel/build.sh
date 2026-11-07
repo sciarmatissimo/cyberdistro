@@ -37,7 +37,7 @@ log(){ printf '\033[1;36m[sentinel]\033[0m %s\n' "$*"; }
 die(){ printf '\033[1;31m[sentinel:ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root (live-build needs chroot/mount)."
-for c in lb wget gpg python3 cmake g++ git sha256sum; do
+for c in lb wget gpg python3 cmake g++ git sha256sum xorriso mdir; do
     command -v "$c" >/dev/null || die "missing tool: $c"
 done
 mkdir -p "$CACHE"
@@ -107,7 +107,12 @@ license: Apache-2.0
 sha256: $MODEL_SHA256
 EOF
 
-# 6) live-build --------------------------------------------------------------------
+# 6) GRUB font -----------------------------------------------------------------------
+# BIOS GRUB loads $prefix/fonts/unicode.pf2 for the graphical menu; without it the
+# menu is invisible and an error is printed ("unicode.pf2 not found").
+install -D -m644 /usr/share/grub/unicode.pf2 config/includes.binary/boot/grub/fonts/unicode.pf2
+
+# 7) live-build --------------------------------------------------------------------
 if [ "${1:-}" = "--clean" ]; then lb clean --purge || true; fi
 log "lb config"
 lb config
@@ -117,7 +122,19 @@ lb build 2>&1 | tee "$CACHE/build-$(date +%Y%m%d-%H%M%S).log"
 mkdir -p "$ROOT/iso"
 mv live-image-amd64.hybrid.iso "$OUT"
 
-# 7) size gate -----------------------------------------------------------------------
+# 8) boot checks ----------------------------------------------------------------------
+# UEFI must boot through the signed shim (Secure Boot); BIOS GRUB must find its font.
+EFIIMG="$CACHE/efi.img"
+rm -f "$EFIIMG"
+xorriso -osirrox on -indev "$OUT" -extract /boot/grub/efi.img "$EFIIMG" >/dev/null 2>&1 || die "no /boot/grub/efi.img in the ISO"
+# bootx64.efi = shim (signed by Microsoft UEFI CA), grubx64.efi = GRUB signed by Debian.
+for f in /EFI/boot/bootx64.efi /EFI/boot/grubx64.efi; do
+    mdir -i "$EFIIMG" "::$f" >/dev/null 2>&1 || die "Secure Boot chain incomplete: $f missing in efi.img"
+done
+xorriso -indev "$OUT" -find /boot/grub/fonts/unicode.pf2 2>/dev/null | grep -q unicode.pf2 || die "GRUB font missing in the ISO"
+log "boot checks OK (shim + signed GRUB in efi.img, GRUB font present)"
+
+# 9) size gate -----------------------------------------------------------------------
 SIZE="$(stat -c%s "$OUT")"
 log "ISO size: $SIZE bytes (limit $LIMIT)"
 [ "$SIZE" -lt "$LIMIT" ] || die "ISO exceeds the 2 000 MB limit: $SIZE bytes"

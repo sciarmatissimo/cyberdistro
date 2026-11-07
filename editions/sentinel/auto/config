@@ -5,6 +5,8 @@
 #   * firmware is listed explicitly in package-lists (no --firmware-* auto
 #     selection, which pulls in datacenter firmware such as Netronome/Marvell);
 #   * no Kali archive, no KDE, no Tor (Tor is installable from the GUI);
+#   * UEFI Secure Boot: Debian's Microsoft-signed shim + Debian-signed GRUB
+#     (most PCs ship with Secure Boot ON; an unsigned loader is refused);
 #   * Zeek comes from the Zeek project's OBS repository (config/archives).
 set -e
 
@@ -18,10 +20,10 @@ lb config noauto \
     --chroot-squashfs-compression-type xz \
     --debian-installer none \
     --bootloaders "grub-efi grub-pc" \
-    --uefi-secure-boot disable \
+    --uefi-secure-boot enable \
     --iso-application "CyberDistro Sentinel" \
     --iso-publisher "CyberDistro Project" \
-    --iso-volume "CDSentinel-$(cat ../VERSION 2>/dev/null || echo 0.1.0)" \
+    --iso-volume "CDSentinel-$(cat VERSION 2>/dev/null || echo dev)" \
     --memtest none \
     --apt-recommends false \
     --apt-indices false \

@@ -35,6 +35,21 @@ locale. Non sostituisce la PC Edition: le release precedenti restano invariate.
 - Security Center Sentinel: Home, Rete, Protezione, Assistente AI, Report, Privacy, Impostazioni.
 - Tor **non incluso**: si installa dalla sezione Privacy.
 
+## Come scrivere la chiavetta USB
+La ISO va **scritta come immagine**, non copiata come file: copiare il file \`.iso\` su una
+chiavetta già formattata non la rende avviabile.
+
+- **Windows:** [Rufus](https://rufus.ie) → seleziona la ISO → quando chiede la modalità scegli
+  **"Scrivi in modalità immagine DD"**. In alternativa [balenaEtcher](https://etcher.balena.io).
+- **macOS / Linux:** balenaEtcher, oppure \`sudo dd if=CyberDistro-Sentinel-Q3_K_M-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync\`
+  (sostituisci \`/dev/sdX\` con la chiavetta: tutto il suo contenuto viene cancellato).
+- Avvio: inserisci la chiavetta, accendi il PC e apri il menu di avvio (di solito **F12**, F11,
+  F10, F8 o Esc, a seconda del produttore), poi scegli la voce USB.
+- **Secure Boot può restare attivo**: dalla 0.1.1 il caricatore è firmato (shim Debian firmato
+  Microsoft + GRUB firmato Debian). Se il PC lo rifiuta comunque, verifica che nelle impostazioni
+  del firmware sia consentito il "Microsoft UEFI CA" (certificati di terze parti; su alcuni
+  portatili Lenovo e su alcuni PC "Secured-core" è disattivato per default).
+
 ## Credenziali live
 Utente \`analyst\`, password \`cyberdistro\`.
 
@@ -48,7 +63,7 @@ sha256sum -c CyberDistro-Sentinel-Q3_K_M-x86_64.iso.sha256
 ${INFO}
 \`\`\`
 
-Stato: **alpha**. Secure Boot non firmato (disattivalo per avviare).
+Stato: **alpha**.
 EOF
 [ -f "$EXTRA" ] && cat "$EXTRA" >> "$NOTES"
 echo "[release] $NOTES"

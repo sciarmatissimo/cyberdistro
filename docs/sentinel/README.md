@@ -71,7 +71,9 @@ rete o un motore non è attivo.
   su PC con 4 GB resta spento.
 - Persistenza cifrata: script presente (`sudo cyberdistro-make-persistence`), non ancora provato
   su chiavetta reale in questa edizione.
-- Secure Boot non firmato.
+- Fino alla 0.1.0 il caricatore UEFI non era firmato: con Secure Boot attivo il PC non riconosceva
+  la chiavetta. Dalla 0.1.1 è firmato (shim + GRUB di Debian). Istruzioni per scrivere la chiavetta
+  nelle note di rilascio.
 
 ## Build
 
