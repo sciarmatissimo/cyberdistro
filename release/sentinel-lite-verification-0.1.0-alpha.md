@@ -13,8 +13,8 @@ Stesso sistema della Kiosk 0.1.1 (motori, regole, modello, Security Center), pi�
 - finestra Wi‑Fi del Security Center rifatta: dimensioni normali, pulsanti in italiano
   ("Connetti", "Annulla"), campo password solo per le reti protette, nessun simbolo emoji.
 
-Spazio: +135 MB di pacchetti `.deb` (di cui ~70 MB Firefox), ISO finale 2 055 823 360 byte,
-91 MB sotto il limite GitHub di 2 GiB per file.
+Spazio: +135 MB di pacchetti `.deb` (di cui ~70 MB Firefox), ISO di circa 2 056 MB,
+~91 MB sotto il limite GitHub di 2 GiB per file.
 
 ## Verifica (7 novembre 2026)
 
@@ -33,6 +33,10 @@ ISO avviata **come chiavetta USB** (`usb-storage` in QEMU, 4 GB di RAM, 2 core):
 - Difetti trovati e corretti durante le prove: schermo nero (live-config avviava una seconda
   sessione grafica su tty1, in conflitto con quella di greetd); icona del menu Start vuota
   (mancava il plugin SVG di Qt).
+
+ISO pubblicata (costruita da GitHub Actions, 2 056 024 064 byte): scaricata dalla release,
+SHA-256 verificato, avviata come chiavetta USB in UEFI con Secure Boot fino al desktop LXQt con
+il Security Center e stato VERDE.
 
 ## Non ancora verificato
 - Hardware reale e chiavetta fisica (solo macchine virtuali). La Kiosk 0.1.1 è stata avviata con

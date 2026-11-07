@@ -29,7 +29,10 @@ configurazione di LXQt, accesso automatico con `startx`).
 
 ### Sentinel Lite 0.1.0-alpha
 
-ISO di 2 055 823 360 byte. Verificata in macchina virtuale come chiavetta USB in UEFI con Secure
+ISO pubblicata nella release [`sentinel-lite-v0.1.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.1.0-alpha)
+(2 056 024 064 byte, SHA-256 `304444f243c636bc0a4d98d51b9bdece6d6fe3fc2cc0d9dd10d0b9dfbb936002`, costruita da
+GitHub Actions): scaricata, checksum verificato e avviata in QEMU con Secure Boot fino al desktop.
+La build locale (2 055 823 360 byte) è stata verificata in macchina virtuale come chiavetta USB in UEFI con Secure
 Boot, UEFI e BIOS: desktop LXQt, Security Center con stato VERDE, menu, Firefox, file manager e
 terminale funzionanti; ~1,46 GB di RAM usati con Security Center, Firefox e terminale aperti.
 Dettagli: [`release/sentinel-lite-verification-0.1.0-alpha.md`](../../release/sentinel-lite-verification-0.1.0-alpha.md).
