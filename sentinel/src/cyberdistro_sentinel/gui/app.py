@@ -616,7 +616,10 @@ class Main(QMainWindow):
     def close_incident(self):
         st = self.data.store()
         if self.selected_inc and st:
-            st.close_incident(self.selected_inc["key"])
+            try:
+                st.close_incident(self.selected_inc["key"])
+            except Exception as e:              # noqa: BLE001
+                QMessageBox.warning(self, "Segna come gestito", f"Non riesco a salvare: {e}")
             self.refresh()
 
     # ---------------------------------------------------------------- Assistente
@@ -791,9 +794,7 @@ class Main(QMainWindow):
                        "qualcosa potrebbe smettere di funzionare.\nPuoi annullare dalla sezione Report.".replace("{ip}", ip)):
             return
         code, out = run(["pkexec", "/usr/local/sbin/sentinel-action", "block", ip, "24"], 60)
-        st = self.data.store()
-        if st:
-            st.log_action("blocco 24 ore", ip, out[:200] if code == 0 else "errore: " + out[:200])
+        self._log("blocco 24 ore", ip, out[:200] if code == 0 else "errore: " + out[:200])
         QMessageBox.information(self, "Blocca", out or ("Fatto." if code == 0 else "Non riuscito."))
         self.refresh()
 
@@ -832,14 +833,12 @@ class Main(QMainWindow):
                        "Confermi di avere il permesso?"):
             return
         self.say_status(f"Scansione di {netw} in corso…")
-        st = self.data.store()
-        aid = st.log_action("scansione rete", str(netw), "in corso") if st else None
+        aid = self._log("scansione rete", str(netw), "in corso")
 
         def done(res):
             code, out = res if not isinstance(res, Exception) else (1, str(res))
             n = out.count("Host is up")
-            if st and aid:
-                st.finish_action(aid, f"dispositivi che hanno risposto: {n}")
+            self._finish(aid, f"dispositivi che hanno risposto: {n}")
             QMessageBox.information(self, "Esamina", f"Dispositivi che hanno risposto: {n}.\n"
                                     "Compariranno nella mappa man mano che Sentinel li sente in rete.\n\n"
                                     "Sentinel registra questa scansione come attività tua, non come attacco.")
@@ -855,8 +854,7 @@ class Main(QMainWindow):
                        "Fallo SOLO se il dispositivo è tuo o hai il permesso. Confermi?"):
             return
 
-        st = self.data.store()
-        aid = st.log_action("scansione dispositivo", d["ip"], "in corso") if st else None
+        aid = self._log("scansione dispositivo", d["ip"], "in corso")
         self.say_status(f"Esame di {d['ip']} in corso…")
 
         def done(res):
@@ -865,8 +863,7 @@ class Main(QMainWindow):
             ok = code == 0 and "Nmap done" in out
             result = (("porte aperte: " + ", ".join(map(str, ports))) if ports else "nessuna porta comune aperta") \
                 if ok else "esame non riuscito"
-            if st and aid:
-                st.finish_action(aid, result)
+            self._finish(aid, result)
             if not ok:
                 msg = "L'esame non è riuscito.\n" + out[-400:]
             else:
@@ -874,12 +871,30 @@ class Main(QMainWindow):
                 msg += ("\n\nSentinel ha controllato le 100 porte più comuni. Questa scansione è registrata come "
                         "attività tua: non comparirà come attacco.")
             if self.advanced:
-                msg += "\n\nComando: nmap -sT -F -T3 " + d["ip"]
+                msg += "\n\nComando: nmap -Pn -sT -F -T3 " + d["ip"]
             QMessageBox.information(self, f"Risultato per {d['ip']}", msg)
             self.refresh()
             if self.sel_dev and self.sel_dev.get("ip") == d["ip"]:
                 self.show_device(self.sel_dev)
-        self.pool.start(Job(lambda: run(["nmap", "-sT", "-F", "-T3", d["ip"]], 600), done))
+        # -Pn: the device is already on the map; many devices ignore ping and would look "down"
+        self.pool.start(Job(lambda: run(["nmap", "-Pn", "-sT", "-F", "-T3", d["ip"]], 600), done))
+
+    def _log(self, action, target, result):
+        """Record a user action; scans recorded here are shown as the user's own activity."""
+        st = self.data.store()
+        try:
+            return st.log_action(action, target, result) if st else None
+        except Exception as e:                  # noqa: BLE001 — never block the action itself
+            self.say_status(f"Attenzione: non riesco a registrare l'azione ({e}).")
+            return None
+
+    def _finish(self, aid, result):
+        st = self.data.store()
+        if st and aid:
+            try:
+                st.finish_action(aid, result)
+            except Exception:                   # noqa: BLE001
+                pass
 
     def say_status(self, text):
         self.h_net.setText(text)

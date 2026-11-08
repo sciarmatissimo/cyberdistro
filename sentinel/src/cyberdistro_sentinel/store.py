@@ -8,6 +8,7 @@ path is on the encrypted persistence partition.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -39,6 +40,13 @@ class Store:
         self.db = sqlite3.connect(str(self.path), timeout=5)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        try:
+            # The daemon (user sentinel, umask 007) creates the file; SQLite would make it 0640, so the
+            # Security Center (user analyst, group sentinel) could not record actions or close alarms.
+            if self.path.stat().st_uid == os.getuid():
+                os.chmod(self.path, 0o660)
+        except OSError:
+            pass
         try:                                        # added in 0.2: end of a user-started scan
             self.db.execute("ALTER TABLE actions ADD COLUMN end_ts REAL")
         except sqlite3.OperationalError:
