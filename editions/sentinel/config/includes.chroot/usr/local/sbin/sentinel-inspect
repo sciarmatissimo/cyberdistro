@@ -212,6 +212,17 @@ def start(minutes, target):
     write_state(state="running", target=target, devices=len(victims), started=time.time(),
                 ends=ends, minutes=minutes, updated=time.time())
 
+    # Detach so the pkexec call from the Security Center returns at once; the
+    # worker keeps poisoning/forwarding until the deadline, then restores.
+    if os.fork() > 0:
+        print(f"Ispezione avviata per {minutes} minuti.")
+        return
+    os.setsid()
+    devnull = os.open(os.devnull, os.O_RDWR)
+    for fd in (0, 1, 2):
+        os.dup2(devnull, fd)
+    PIDFILE.write_text(str(os.getpid()))
+
     stop = {"flag": False}
 
     def _graceful(_s=None, _f=None):
