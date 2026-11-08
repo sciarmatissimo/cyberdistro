@@ -24,4 +24,10 @@
     <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>yes</allow_active></defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/local/sbin/sentinel-privacy</annotate>
   </action>
+  <action id="org.cyberdistro.sentinel.inspect">
+    <description>Run a bounded, self-healing deep inspection of this network</description>
+    <message>Sentinel vuole ispezionare il traffico della rete per qualche minuto</message>
+    <defaults><allow_any>no</allow_any><allow_inactive>no</allow_inactive><allow_active>yes</allow_active></defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/sbin/sentinel-inspect</annotate>
+  </action>
 </policyconfig>

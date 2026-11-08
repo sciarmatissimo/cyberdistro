@@ -12,7 +12,7 @@ for ep in "sentinel-core:daemon" "sentinel-sensor:sensor" "sentinel:cli" "sentin
     printf '#!/usr/bin/python3\nimport sys\nfrom cyberdistro_sentinel.%s import main\nsys.exit(main())\n' "$mod" > "/usr/local/bin/$name"
     chmod 755 "/usr/local/bin/$name"
 done
-python3 -c "import cyberdistro_sentinel.daemon, cyberdistro_sentinel.sensor, cyberdistro_sentinel.assistant, cyberdistro_sentinel.agent"
+python3 -c "import cyberdistro_sentinel.daemon, cyberdistro_sentinel.sensor, cyberdistro_sentinel.assistant, cyberdistro_sentinel.agent, cyberdistro_sentinel.discover, cyberdistro_sentinel.inspect, cyberdistro_sentinel.netcheck"
 install -D -m755 "$SRC/privacy/bin/privacy-mode" /usr/local/sbin/privacy-mode
 install -D -m644 "$SRC/privacy/nftables/killswitch.nft" /usr/share/cyberdistro/privacy/killswitch.nft
 install -D -m755 "$SRC/privacy/persistence/make-persistence.sh" /usr/local/sbin/cyberdistro-make-persistence

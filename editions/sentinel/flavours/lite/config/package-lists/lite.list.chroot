@@ -47,5 +47,7 @@ featherpad
 featherpad-l10n
 nm-tray
 nm-tray-l10n
+# desktop notifications from the Security Center (notify-send); lxqt-notificationd shows them
+libnotify-bin
 firefox-esr
 firefox-esr-l10n-it

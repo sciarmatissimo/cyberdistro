@@ -13,7 +13,8 @@
 #                                        to /var/lib/sentinel/evidence (pcap)
 #
 # Never acts against this PC, the router (except pinning its real address) or the
-# DNS servers in use.set -euo pipefail
+# DNS servers in use.
+set -euo pipefail
 
 TABLE="inet sentinel"
 

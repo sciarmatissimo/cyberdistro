@@ -254,8 +254,51 @@ def iface_addrs(iface: str) -> tuple[str | None, str | None]:
     return ip, mac
 
 
-def run_live(out_path: Path, iface: str | None = None) -> None:
+def iface_netmask(iface: str) -> str | None:
+    try:
+        import fcntl
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x891B,   # SIOCGIFNETMASK
+                                            struct.pack("256s", iface[:15].encode()))[20:24])
+    except OSError:
+        return None
+
+
+# ---------------------------------------------------------------- active census
+# The census is the one active step: an ARP sweep of this PC's own subnet, done
+# only when the user has turned it on (control file written by the Security
+# Center, which first checks "this is my network"). ARP never leaves the LAN.
+CENSUS_INTERVAL = 180.0
+CENSUS_BATCH = 16            # frames per burst
+CENSUS_GAP = 0.02           # seconds between bursts (gentle on the network)
+
+
+def census_enabled(path: Path) -> bool:
+    try:
+        return bool(json.loads(path.read_text()).get("enabled"))
+    except (OSError, ValueError):
+        return False
+
+
+def sweep(sock, src_mac: str, src_ip: str, netmask: str) -> int:
+    """Send one ARP request per host of the local subnet. Returns how many were sent."""
+    from .discover import arp_request_frame, subnet_hosts
+    hosts = subnet_hosts(src_ip, netmask)
+    sent = 0
+    for n, target in enumerate(hosts):
+        try:
+            sock.send(arp_request_frame(src_mac, src_ip, target))
+            sent += 1
+        except OSError:
+            break
+        if n % CENSUS_BATCH == CENSUS_BATCH - 1:
+            time.sleep(CENSUS_GAP)
+    return sent
+
+
+def run_live(out_path: Path, iface: str | None = None, census_path: Path | None = None) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    census_path = census_path or (out_path.parent / "census.json")
     seq = 0
     dd = Deduper()
 
@@ -276,9 +319,11 @@ def run_live(out_path: Path, iface: str | None = None) -> None:
         sock.bind((dev, 0))
         sock.settimeout(5.0)
         self_ip, self_mac = iface_addrs(dev)
+        netmask = iface_netmask(dev)
         with open(out_path, "a", encoding="utf-8") as fh:
             emit(fh, {"kind": "net", "iface": dev, "gateway": gw, "self_ip": self_ip, "self_mac": self_mac})
             last_check = time.time()
+            last_census = 0.0
             watch = frozenset([gw]) if gw else frozenset()
             while True:
                 try:
@@ -290,8 +335,14 @@ def run_live(out_path: Path, iface: str | None = None) -> None:
                     pass
                 except OSError:
                     break
-                if time.time() - last_check > 10:
-                    last_check = time.time()
+                now = time.time()
+                if (self_ip and self_mac and netmask and now - last_census > CENSUS_INTERVAL
+                        and census_enabled(census_path)):
+                    last_census = now
+                    n = sweep(sock, self_mac, self_ip, netmask)
+                    emit(fh, {"kind": "census", "sent": n})
+                if now - last_check > 10:
+                    last_check = now
                     ndev, ngw = default_route()
                     if (iface is None and ndev != dev) or ngw != gw:
                         break                       # network changed: restart

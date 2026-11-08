@@ -25,8 +25,9 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, 
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QBrush
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFrame,
                                QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QScrollArea,
-                               QSizePolicy, QSplitter, QStackedWidget, QTextBrowser, QVBoxLayout, QWidget)
+                               QListWidgetItem, QMainWindow, QMessageBox, QPushButton, QRadioButton,
+                               QScrollArea, QSizePolicy, QSpinBox, QSplitter, QStackedWidget, QTextBrowser,
+                               QVBoxLayout, QWidget)
 
 from .. import __version__
 from ..assistant import LLM, answer_free, answer_question, describe_device, explain, last_scan_of, network_facts
@@ -37,6 +38,8 @@ from ..report import write as write_report
 from ..store import Store
 from ..templates import card
 from .. import agent as ag
+from .. import inspect as insp
+from .. import netcheck as nc
 
 COLOURS = {"verde": "#1e8e3e", "giallo": "#d29b00", "rosso": "#c5221f", "grigio": "#80868b"}
 HEAD = {"verde": "Nessuna attività sospetta importante rilevata",
@@ -598,14 +601,16 @@ class Main(QMainWindow):
         v.addWidget(label("Attività AI", "h1"))
         v.addWidget(label("Qui vedi cosa fa l'agente di Sentinel: cosa ha notato, cosa propone di fare per proteggere "
                           "questo PC e cosa è già stato fatto. Con il livello «Chiede» nessuna azione parte senza il tuo "
-                          "«Approva». L'agente agisce solo su questo PC: non tocca il router né gli altri dispositivi.",
-                          "muted"))
+                          "«Approva». Le azioni di difesa agiscono solo su questo PC. Gli strumenti qui sotto guardano "
+                          "l'intera rete (solo la tua): la mappa completa trova tutti i dispositivi, e l'ispezione "
+                          "mostra con chi parlano — parte solo quando lo chiedi tu.", "muted"))
         f, l = cardframe()
         row = QHBoxLayout()
         row.addWidget(label("Livello di autonomia:", None, False))
         self.ag_level = QComboBox()
         self.ag_level.addItem("Chiede — prepara le azioni e aspetta il tuo «Approva»", "chiede")
         self.ag_level.addItem("Osserva — solo consigli, nessuna azione", "osserva")
+        self.ag_level.addItem("Protezione automatica — esegue da solo le azioni locali e reversibili", "auto")
         self.ag_level.activated.connect(self.agent_set_level)
         row.addWidget(self.ag_level, 1)
         self.ag_stop = QPushButton("Ferma l'agente")
@@ -613,12 +618,37 @@ class Main(QMainWindow):
         self.ag_stop.clicked.connect(self.agent_toggle)
         row.addWidget(self.ag_stop)
         l.addLayout(row)
-        self.ag_own = QCheckBox("Questa è la mia rete: l'agente può proporre di esaminare (Nmap) i dispositivi nuovi")
+        self.ag_own = QCheckBox("Questa è la mia rete: l'agente può vedere tutti i dispositivi (censimento) "
+                                "e proporre di esaminarli (Nmap)")
         self.ag_own.clicked.connect(self.agent_set_own)
         l.addWidget(self.ag_own)
+        self.ag_census = QCheckBox("Mappa completa della rete: cerca ogni pochi minuti tutti i dispositivi collegati, "
+                                   "anche quelli che non parlano con questo PC")
+        self.ag_census.clicked.connect(self.agent_set_census)
+        l.addWidget(self.ag_census)
         self.ag_state = label("", "muted")
         l.addWidget(self.ag_state)
+        tools = QHBoxLayout()
+        self.b_netcheck = QPushButton("Controlla questa rete (Wi-Fi e DNS)")
+        self.b_netcheck.clicked.connect(self.do_netcheck)
+        self.b_inspect = QPushButton("Ispeziona il traffico della rete…")
+        self.b_inspect.clicked.connect(self.open_inspect)
+        self.b_inspect_stop = QPushButton("Ferma ispezione")
+        self.b_inspect_stop.setObjectName("danger")
+        self.b_inspect_stop.clicked.connect(self.inspect_stop)
+        self.b_inspect_stop.setVisible(False)
+        tools.addWidget(self.b_netcheck)
+        tools.addWidget(self.b_inspect)
+        tools.addWidget(self.b_inspect_stop)
+        tools.addStretch()
+        l.addLayout(tools)
+        self.ag_insp = label("", "muted")
+        l.addWidget(self.ag_insp)
         v.addWidget(f)
+        self._insp_window: tuple[float, float] | None = None
+        self._insp_prev = "idle"
+        self._seen_pending = 0
+        self._seen_grave = 0
         sp = QSplitter(Qt.Horizontal)
         left = QWidget()
         lv = QVBoxLayout(left)
@@ -646,6 +676,7 @@ class Main(QMainWindow):
         self.ag_ai.clicked.connect(self.agent_explain)
         for b in (self.ag_ok, self.ag_no, self.ag_undo, self.ag_ai):
             br.addWidget(b)
+            b.setEnabled(False)                      # nothing selected yet
         rv.addLayout(br)
         sp.addWidget(right)
         sp.setSizes([420, 640])
@@ -665,19 +696,31 @@ class Main(QMainWindow):
         level = st.meta("agent_level", ag.DEFAULT_LEVEL)
         paused = st.meta("agent_paused", False)
         hb = st.meta("agent_heartbeat", 0) or 0
-        self.ag_level.setCurrentIndex(0 if level == "chiede" else 1)
+        self.ag_level.setCurrentIndex({"chiede": 0, "osserva": 1, "auto": 2}.get(level, 0))
         self.ag_stop.setText("Riattiva l'agente" if paused else "Ferma l'agente")
         self.ag_stop.setObjectName("primary" if paused else "danger")
         self.ag_stop.style().unpolish(self.ag_stop)
         self.ag_stop.style().polish(self.ag_stop)
         gw = next((d for d in self.data.devices if d.get("is_gateway")), None)
+        own = bool(gw and gw.get("mac") and st.meta("own_network") == gw.get("mac"))
         self.ag_own.setEnabled(bool(gw and gw.get("mac")))
-        self.ag_own.setChecked(bool(gw and gw.get("mac") and st.meta("own_network") == gw.get("mac")))
+        self.ag_own.setChecked(own)
+        self.ag_census.setEnabled(own)
+        self.ag_census.setChecked(own and self._census_on())
+        if not own and self._census_on():
+            self._write_census(False)               # census only on a declared own network
         alive = time.time() - hb < 30
-        self.ag_state.setText(("L'agente è FERMO: non propone nulla finché non lo riattivi." if paused else
-                               "L'agente è attivo e osserva gli allarmi." if alive else
-                               "L'agente non risponde (servizio sentinel-agent non attivo).")
+        self.ag_state.setText((("Protezione automatica attiva: l'agente esegue da solo blocchi, prova e router "
+                                "fissato; esami e ispezioni restano da approvare. " if level == "auto" and not paused
+                                else "")
+                               + ("L'agente è FERMO: non propone nulla finché non lo riattivi." if paused else
+                                  "L'agente è attivo e osserva gli allarmi." if alive else
+                                  "L'agente non risponde (servizio sentinel-agent non attivo)."))
                               + f" Ultimo controllo: {when(hb)}.")
+        self._update_inspection(st, own)
+        if level == "auto" and not paused:
+            self._autorun(st)
+        self._notify(st)
         rows = [t for t in self.data.tasks if t["status"] in (ag.PROPOSTA, ag.CONSIGLIO, ag.IN_CORSO, ag.ATTIVA)]
         order = {ag.PROPOSTA: 0, ag.IN_CORSO: 1, ag.ATTIVA: 2, ag.CONSIGLIO: 3}
         rank = {"pin_gateway": 0, "block": 1, "examine": 2, "capture": 3}
@@ -686,7 +729,8 @@ class Main(QMainWindow):
         item = self.nav.item(self.pages["Attività AI"])
         item.setText("Attività AI" + (f"  ({n_pending})" if n_pending else ""))
         keys = [(t["id"], t["status"]) for t in rows]
-        if keys != [(t["id"], t["status"]) for t in self._ag_rows]:
+        if keys != getattr(self, "_ag_keys", None):     # first paint (None) always rebuilds
+            self._ag_keys = keys
             self._ag_rows = rows
             self.ag_list.blockSignals(True)
             self.ag_list.clear()
@@ -842,6 +886,219 @@ class Main(QMainWindow):
                 ag.undo(st, t, self._ag_runner, ["pkexec"])
         st.agent_log("Agente fermato dall'utente: proposte rifiutate, azioni annullate.")
         self.refresh()
+
+    # ---------------- census (2a) ----------------
+    def _census_path(self) -> Path:
+        return self.paths.state_dir / "census.json"
+
+    def _census_on(self) -> bool:
+        try:
+            return bool(json.loads(self._census_path().read_text()).get("enabled"))
+        except (OSError, ValueError):
+            return False
+
+    def _write_census(self, on: bool):
+        try:
+            p = self._census_path()
+            p.write_text(json.dumps({"enabled": bool(on)}))
+            try:
+                p.chmod(0o664)
+            except OSError:
+                pass
+        except OSError as e:               # noqa: BLE001
+            self.say_status(f"Non riesco a salvare l'impostazione del censimento: {e}")
+
+    def agent_set_census(self, on):
+        st = self.data.store()
+        gw = next((d for d in self.data.devices if d.get("is_gateway")), None)
+        if not st or not gw or st.meta("own_network") != gw.get("mac"):
+            self.ag_census.setChecked(False)
+            return
+        self._write_census(on)
+        if st:
+            st.agent_log("Mappa completa della rete attivata: cerco tutti i dispositivi collegati." if on else
+                         "Mappa completa della rete disattivata.")
+        self.refresh()
+
+    # ---------------- automatic protection (2c) ----------------
+    def _autorun(self, st):
+        inflight = getattr(self, "_autorun_ids", set())
+        for t in self.data.tasks:
+            if (t["status"] == ag.PROPOSTA and t["action"] in ag.AUTO_ACTIONS and t["id"] not in inflight):
+                inflight.add(t["id"])
+                self._autorun_ids = inflight
+                st.agent_log(f"Protezione automatica: eseguo {ag.lc(ag.label(t))}.", t["id"])
+
+                def done(res, tid=t["id"]):
+                    self._autorun_ids.discard(tid)
+                    self.refresh()
+                self.pool.start(Job(lambda t=t: ag.execute(Store(self.paths.db), t, self._ag_runner, ["pkexec"]), done))
+
+    # ---------------- desktop notifications (2c) ----------------
+    def _notify(self, st):
+        pending = sum(1 for t in self.data.tasks if t["status"] == ag.PROPOSTA)
+        grave = [i for i in self.data.incidents if i["severity"] == "alta" and i.get("status", "aperto") == "aperto"]
+        grave_n = len(grave)
+        if not getattr(self, "_notify_ready", False):   # first paint: learn the baseline, don't toast
+            self._seen_pending, self._seen_grave, self._notify_ready = pending, grave_n, True
+            return
+        if st.meta("agent_level", ag.DEFAULT_LEVEL) == "osserva":
+            self._seen_pending, self._seen_grave = pending, grave_n
+            return
+        if pending > self._seen_pending and pending:
+            self._toast("Sentinel: azione da approvare",
+                        f"{pending} proposta/e di protezione ti aspettano in «Attività AI».")
+        if grave_n > self._seen_grave and grave_n:
+            self._toast("Sentinel: allarme grave", card(grave[0])["title"])
+        self._seen_pending, self._seen_grave = pending, grave_n
+
+    def _toast(self, title, body):
+        if self.smoke:
+            return
+        try:
+            subprocess.Popen(["notify-send", "-a", "Sentinel", "-i", "security-high", title, body])
+        except OSError:
+            pass
+
+    # ---------------- deep inspection (2b) ----------------
+    def _update_inspection(self, st, own):
+        state = insp.read_state(self.paths.run_dir)
+        running = state.get("state") == "running"
+        self.b_inspect.setVisible(not running)
+        self.b_inspect_stop.setVisible(running)
+        self.b_inspect.setEnabled(own)
+        self.b_inspect.setToolTip("" if own else "Prima dichiara che questa è la tua rete.")
+        if running:
+            self._insp_window = (state.get("started", time.time()), state.get("ends", time.time()))
+            left = max(0, int(state.get("ends", 0) - time.time()))
+            scope = "tutta la rete" if state.get("target") == "all" else state.get("target")
+            self.ag_insp.setText(f"Ispezione del traffico in corso ({scope}) — mancano {left // 60}:{left % 60:02d}. "
+                                 "Suricata e Zeek stanno analizzando il traffico di tutti i dispositivi.")
+        else:
+            self.ag_insp.setText("")
+        if self._insp_prev == "running" and not running and self._insp_window:
+            self._show_inspection_results(*self._insp_window)
+            self._insp_window = None
+        self._insp_prev = state.get("state", "idle")
+
+    def _self_and_gw(self):
+        self_ips = {d["ip"] for d in self.data.devices if d.get("is_self") and d.get("ip")}
+        self_ips |= ag.local_ips()
+        gw = next((d.get("ip") for d in self.data.devices if d.get("is_gateway")), None)
+        return self_ips, gw
+
+    def _show_inspection_results(self, t0, t1):
+        self_ips, gw = self._self_and_gw()
+        try:
+            devs = insp.summarize(self.paths.zeek_dir, t0, t1, self_ips, gw)
+        except Exception as e:                      # noqa: BLE001
+            devs = []
+            print("inspect summary:", e, file=sys.stderr)
+        st = self.data.store()
+        if st:
+            st.agent_log(f"Ispezione del traffico terminata: {len(devs)} dispositivi osservati, rete ripristinata.")
+        e = html.escape
+        if not devs:
+            body = ("<p>L'ispezione è terminata. Non ho un riepilogo per dispositivo: potrebbe essere servito più "
+                    "tempo, oppure sulla rete passava poco traffico durante l'ispezione.</p>")
+        else:
+            body = "<p>Ecco cosa ha fatto ogni dispositivo durante l'ispezione (solo metadati; il contenuto cifrato " \
+                   "non è visibile):</p>"
+            for d in devs[:25]:
+                body += f"<p><b>{e(insp.device_line(d))}</b>"
+                if d["dns_names"]:
+                    body += "<br>Siti/nomi cercati: " + e(", ".join(d["dns_names"][:8]))
+                body += "</p>"
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Ispezione del traffico — risultati")
+        dlg.setMinimumSize(640, 480)
+        lay = QVBoxLayout(dlg)
+        tb = QTextBrowser()
+        tb.setHtml(body)
+        lay.addWidget(tb)
+        bb = QDialogButtonBox()
+        bb.addButton("Chiudi", QDialogButtonBox.AcceptRole)
+        bb.accepted.connect(dlg.accept)
+        lay.addWidget(bb)
+        dlg.exec()
+
+    def open_inspect(self):
+        st = self.data.store()
+        gw = next((d for d in self.data.devices if d.get("is_gateway")), None)
+        if not st or not gw or st.meta("own_network") != gw.get("mac"):
+            QMessageBox.information(self, "Ispezione del traffico",
+                                    "Prima spunta «Questa è la mia rete». L'ispezione è consentita solo sulla tua rete.")
+            return
+        others = [d for d in self.data.devices if d.get("ip") and not d.get("is_self") and not d.get("is_gateway")]
+        dlg = InspectDialog(others, self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        minutes, target = dlg.choice()
+        self.say_status("Avvio dell'ispezione del traffico…")
+
+        def done(res):
+            code, out = res if not isinstance(res, Exception) else (1, str(res))
+            if code != 0:
+                QMessageBox.warning(self, "Ispezione del traffico", "Non sono riuscito ad avviare l'ispezione.\n\n" + out[-500:])
+            self.refresh()
+        self.pool.start(Job(lambda: run(["pkexec", "/usr/local/sbin/sentinel-inspect", "start",
+                                         str(minutes), target], 60), done))
+
+    def inspect_stop(self):
+        self.say_status("Fermo l'ispezione…")
+
+        def done(_res):
+            self.refresh()
+        self.pool.start(Job(lambda: run(["pkexec", "/usr/local/sbin/sentinel-inspect", "stop"], 30), done))
+
+    # ---------------- Wi-Fi / DNS check (2c) ----------------
+    def do_netcheck(self):
+        self.b_netcheck.setEnabled(False)
+        self.b_netcheck.setText("Controllo in corso…")
+
+        def work():
+            code, wifi = run(["nmcli", "-t", "-f", "IN-USE,SSID,SECURITY,CHAN,SIGNAL,BSSID", "device", "wifi"], 20)
+            findings = nc.wifi_findings(wifi if code == 0 else "")
+            import socket as _s
+            rand = f"cyberdistro-{int(time.time())}-xq.example-no-such-domain-{os.getpid()}.com"
+            answers = []
+            try:
+                answers = [ai[4][0] for ai in _s.getaddrinfo(rand, None)]
+            except Exception:                        # noqa: BLE001 — NXDOMAIN is the good case
+                pass
+            findings += nc.dns_findings(rand, answers)
+            return findings
+
+        def done(res):
+            self.b_netcheck.setEnabled(True)
+            self.b_netcheck.setText("Controlla questa rete (Wi-Fi e DNS)")
+            findings = res if isinstance(res, list) else []
+            self._show_netcheck(findings)
+            st = self.data.store()
+            if st:
+                worst = nc.worst(findings)
+                st.agent_log("Controllo della rete: " + {"ok": "nessun problema.", "info": "nessun problema rilevante.",
+                             "warn": "attenzione, qualcosa da sistemare.", "danger": "attenzione, rete non sicura."}.get(worst, ""))
+        self.pool.start(Job(work, done))
+
+    def _show_netcheck(self, findings):
+        e = html.escape
+        # the kiosk font has no emoji; use words instead of coloured dots
+        word = {"ok": "OK", "info": "Info", "warn": "Attenzione", "danger": "Pericolo"}
+        body = "".join(f"<p><b>[{word.get(f['level'], '')}] {e(f['title'])}</b><br>{e(f['detail'])}</p>"
+                       for f in findings) if findings else "<p>Nessun controllo disponibile (sei connesso via cavo?).</p>"
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Controllo della rete")
+        dlg.setMinimumSize(560, 400)
+        lay = QVBoxLayout(dlg)
+        tb = QTextBrowser()
+        tb.setHtml(body)
+        lay.addWidget(tb)
+        bb = QDialogButtonBox()
+        bb.addButton("Chiudi", QDialogButtonBox.AcceptRole)
+        bb.accepted.connect(dlg.accept)
+        lay.addWidget(bb)
+        dlg.exec()
 
     def agent_explain(self):
         t = self._ag_task()
@@ -1371,6 +1628,69 @@ class WifiDialog(QDialog):
             return None
         s, _sig, sec = self.nets[row]
         return s, sec, self.pw.text()
+
+
+class InspectDialog(QDialog):
+    """Consent-gated setup for the deep traffic inspection (2b): how long, which
+    devices, with a plain warning and a mandatory consent tick."""
+
+    def __init__(self, others, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Ispeziona il traffico della rete")
+        self.setMinimumSize(560, 520)
+        self.others = [d for d in others if d.get("ip")]
+        v = QVBoxLayout(self)
+        v.addWidget(label("Ispezione del traffico della rete", "h2"))
+        warn = QTextBrowser()
+        warn.setHtml(
+            "<p>Per il tempo che scegli, Sentinel fa passare da questo PC il traffico degli altri dispositivi "
+            "(continuando a inoltrarlo, quindi la rete <b>non si interrompe</b>) per mostrarti con chi parlano. "
+            "Al termine si ferma da sola e rimette a posto la rete.</p>"
+            "<p>Vedrai solo <b>chi parla con chi</b>, quanto e quali siti vengono cercati: il contenuto del "
+            "traffico cifrato (HTTPS) resta illeggibile.</p>"
+            "<p><b>Usa questa funzione solo sulla tua rete e solo con il consenso di chi la usa.</b> "
+            "Intercettare le comunicazioni altrui senza permesso può essere illegale "
+            "(in Italia, artt. 617 e seguenti del codice penale).</p>")
+        warn.setMaximumHeight(210)
+        v.addWidget(warn)
+        row = QHBoxLayout()
+        row.addWidget(label("Durata (minuti):", None, False))
+        self.spin = QSpinBox()
+        self.spin.setRange(1, insp.MAX_MINUTES)
+        self.spin.setValue(insp.DEFAULT_MINUTES)
+        row.addWidget(self.spin)
+        row.addStretch()
+        v.addLayout(row)
+        self.r_all = QRadioButton("Tutta la rete (tutti i dispositivi)")
+        self.r_all.setChecked(True)
+        v.addWidget(self.r_all)
+        row2 = QHBoxLayout()
+        self.r_one = QRadioButton("Solo un dispositivo:")
+        row2.addWidget(self.r_one)
+        self.combo = QComboBox()
+        for d in self.others:
+            self.combo.addItem(f"{d['ip']} — {TYPE_LABEL['it'][guess_type(d)]}", d["ip"])
+        self.combo.setEnabled(False)
+        self.r_one.toggled.connect(self.combo.setEnabled)
+        row2.addWidget(self.combo, 1)
+        v.addLayout(row2)
+        self.consent = QCheckBox("Confermo che questa è la mia rete e che ho il consenso di chi la usa.")
+        v.addWidget(self.consent)
+        bb = QDialogButtonBox()
+        self.ok = bb.addButton("Avvia ispezione", QDialogButtonBox.AcceptRole)
+        self.ok.setEnabled(False)
+        bb.addButton("Annulla", QDialogButtonBox.RejectRole)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        self.consent.toggled.connect(self.ok.setEnabled)
+        if not self.others:
+            self.r_one.setEnabled(False)
+        v.addWidget(bb)
+
+    def choice(self):
+        if self.r_one.isChecked() and self.combo.count():
+            return self.spin.value(), self.combo.currentData()
+        return self.spin.value(), "all"
 
 
 def main(argv=None) -> int:

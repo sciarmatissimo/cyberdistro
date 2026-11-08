@@ -36,8 +36,12 @@ from .knowledge import parse_nmap_open, summarize_ports
 from .store import Store
 from .templates import card
 
-LEVELS = ("osserva", "chiede")
+LEVELS = ("osserva", "chiede", "auto")
 DEFAULT_LEVEL = "chiede"
+# In "auto" the Security Center runs these local, reversible, time-limited actions
+# itself without asking; examine (actively scans another device) and the deep
+# inspection are never automatic.
+AUTO_ACTIONS = ("block", "pin_gateway", "capture")
 MAX_PER_HOUR = 12
 BLOCK_HOURS = 24
 LOOKBACK = 3600.0
@@ -305,7 +309,16 @@ def execute(store: Store, task: dict, runner, priv: list[str]) -> dict:
         store.update_task(tid, status=ERRORE, result={"output": (out or "").strip()[:300]})
         store.agent_log(f"Non sono riuscito a: {lc(label(task))} — {(out or '').strip()[:160]}", tid)
     else:
-        store.agent_log(f"Fatto: {lc(label(task))}.", tid)
+        done = store.task(tid)
+        detail = ""
+        r = done.get("result") if isinstance(done.get("result"), dict) else {}
+        if a == "examine":
+            ports = r.get("ports") or []
+            detail = (" Porte aperte trovate: " + ", ".join(map(str, ports)) + "."
+                      if ports else " Nessuna porta comune aperta.")
+        elif a == "capture" and r.get("file"):
+            detail = " File: " + r["file"].rsplit("/", 1)[-1] + "."
+        store.agent_log(f"Fatto: {lc(label(task))}.{detail}", tid)
     return store.task(tid)
 
 

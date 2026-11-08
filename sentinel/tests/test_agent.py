@@ -210,6 +210,23 @@ class TestExecution(Base):
         f = ag.task_facts(c, None)
         self.assertNotIn("example.invalid", f)
 
+    def test_auto_level_still_proposes_for_the_gui_to_run(self):
+        self.st.set_meta("agent_level", "auto", commit=True)
+        self.add(inc("port_scan", ports=30, window_s=60))
+        self.agent.step()
+        self.assertEqual(self.tasks("block")[0]["status"], ag.PROPOSTA)
+        self.assertIn("block", ag.AUTO_ACTIONS)
+        self.assertNotIn("examine", ag.AUTO_ACTIONS)
+
+    def test_examine_history_line_lists_ports(self):
+        self.st.set_meta("own_network", "aa:aa:aa:aa:aa:01", commit=True)
+        self.add(inc("new_device", sev="bassa", src="192.168.1.77", dst=None, ip="192.168.1.77"))
+        self.agent.step()
+        nmap = "23/tcp open telnet\n80/tcp open http\nNmap done: 1 IP address (1 host up)\n"
+        ag.execute(self.st, self.tasks("examine")[0], self.runner(out=nmap), ["pkexec"])
+        line = self.st.agent_logs()[0]["text"]
+        self.assertIn("Porte aperte trovate: 23, 80", line)
+
 
 if __name__ == "__main__":
     unittest.main()
