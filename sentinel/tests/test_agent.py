@@ -5,6 +5,7 @@ import json
 import tempfile
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from cyberdistro_sentinel import agent as ag
@@ -43,6 +44,11 @@ class Base(unittest.TestCase):
                                            is_gateway=True))
         self.st.commit()
         self.agent = ag.Agent(self.st, self.paths)
+        # the test host's own routes must not leak into the scenario
+        for name, val in (("default_gateway", None), ("local_ips", set())):
+            pt = mock.patch.object(ag, name, return_value=val)
+            pt.start()
+            self.addCleanup(pt.stop)
 
     def tearDown(self):
         self.st.db.close()
@@ -104,6 +110,19 @@ class TestPlaybooks(Base):
         self.st.set_meta("own_network", "aa:aa:aa:aa:aa:01", commit=True)
         self.agent.step()
         self.assertEqual(self.tasks("examine")[0]["target"], "192.168.1.77")
+
+
+class TestKernelFacts(unittest.TestCase):
+    def test_default_gateway_and_local_ips_from_proc(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "route"
+            r.write_text("Iface\tDestination\tGateway\tFlags\n"
+                         "enp0s3\t00000000\tFE4DA8C0\t0003\nenp0s3\t004DA8C0\t00000000\t0001\n")
+            self.assertEqual(ag.default_gateway(str(r)), "192.168.77.254")
+            t = Path(d) / "trie"
+            t.write_text("Main:\n  +-- 0.0.0.0/0 3 0 5\n     |-- 192.168.77.111\n        /32 host LOCAL\n"
+                         "     |-- 192.168.77.255\n        /32 link BROADCAST\n")
+            self.assertEqual(ag.local_ips(str(t)), {"192.168.77.111"})
 
 
 class TestLevelsAndLimits(Base):

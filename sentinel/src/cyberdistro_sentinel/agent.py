@@ -95,12 +95,45 @@ def resolvers(path: str = "/etc/resolv.conf") -> set[str]:
     return out
 
 
+def default_gateway(path: str = "/proc/net/route") -> str | None:
+    """IPv4 default gateway from the kernel routing table (authoritative)."""
+    try:
+        for line in Path(path).read_text().splitlines()[1:]:
+            f = line.split()
+            if len(f) > 2 and f[1] == "00000000" and f[2] != "00000000":
+                return str(ipaddress.IPv4Address(bytes.fromhex(f[2])[::-1]))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def local_ips(path: str = "/proc/net/fib_trie") -> set[str]:
+    """Every IPv4 address of this PC (LOCAL entries of the kernel routing trie)."""
+    out, last = set(), None
+    try:
+        for line in Path(path).read_text().splitlines():
+            t = line.strip()
+            if t.startswith("|--"):
+                last = t[3:].strip()
+            elif "/32 host LOCAL" in t and last:
+                out.add(last)
+    except OSError:
+        pass
+    return out - {"127.0.0.1"}
+
+
 def network_ctx(store: Store) -> dict:
+    """Who is who. The router and this PC's addresses come from the kernel (a device
+    row can carry another address of the same card, e.g. an IPv6 one); the router's
+    real hardware address comes from what Sentinel learned first."""
     devs = store.devices()
     me = next((d for d in devs if d.get("is_self")), {})
-    gw = next((d for d in devs if d.get("is_gateway")), {})
-    return {"self_ip": me.get("ip"), "gateway": gw.get("ip"), "gateway_mac": gw.get("mac"),
-            "resolvers": resolvers(), "devices": {d.get("ip"): d for d in devs if d.get("ip")}}
+    gwd = next((d for d in devs if d.get("is_gateway")), {})
+    mine = local_ips() | ({me["ip"]} if me.get("ip") else set())
+    gw = default_gateway() or gwd.get("ip")
+    return {"self_ip": me.get("ip") or next(iter(sorted(mine)), None), "self_ips": mine, "gateway": gw,
+            "gateway_mac": gwd.get("mac"), "resolvers": resolvers(),
+            "devices": {d.get("ip"): d for d in devs if d.get("ip")}}
 
 
 def safe_target(ip, ctx) -> tuple[bool, str]:
@@ -111,7 +144,7 @@ def safe_target(ip, ctx) -> tuple[bool, str]:
         return False, "indirizzo non valido"
     if a.version != 4 or a.is_loopback or a.is_multicast or a.is_unspecified or str(a).endswith(".255"):
         return False, "indirizzo speciale"
-    if ip == ctx.get("self_ip"):
+    if ip == ctx.get("self_ip") or ip in ctx.get("self_ips", ()):
         return False, "è questo PC"
     if ip == ctx.get("gateway"):
         return False, "è il router: bloccarlo interromperebbe la connessione"
