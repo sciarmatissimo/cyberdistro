@@ -41,7 +41,7 @@ azioni sono passate da `pkexec`/`sudo`. Il PC virtuale ha preso l'indirizzo 192.
 | **2c** «Controlla questa rete (Wi-Fi e DNS)» | finestra «Controllo della rete»: «[OK] Il DNS della rete risponde correttamente — un nome inesistente viene segnalato come tale» (nessuna Wi-Fi: PC via cavo) |
 | **2c auto** Proposta router fissato con livello «Protezione automatica» | l'agente esegue **da solo** il router fissato: voce ARP `PERMANENT` sulla scheda vera del router; la proposta passa a ATTIVA |
 
-Prove automatiche: **78 test** (tra cui i nuovi `test_network_tools.py` — frame ARP, censimento,
+Prove automatiche: **76 test** (tra cui i nuovi `test_network_tools.py` — frame ARP, censimento,
 rilevamento port mirror, controlli Wi-Fi/DNS, riepilogo per dispositivo — e `test_gui_job.py` sulla
 consegna affidabile dei callback). Test della GUI offscreen superato.
 

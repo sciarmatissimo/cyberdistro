@@ -35,7 +35,7 @@ tempo, controllo Wi-Fi/DNS) e il livello di autonomia **«Protezione automatica�
 da chiavetta USB fino al desktop, provando a mano tutti e tre gli strumenti con un attacco reale:
 censimento della /24 (richieste ARP a tutti gli indirizzi), protezione automatica che fissa il router
 al suo vero indirizzo hardware, ispezione del traffico avviata e poi fermata con la rete ripristinata
-(inoltro IP tornato a zero), e controllo Wi-Fi/DNS che segnala il DNS sano. 78 test automatici
+(inoltro IP tornato a zero), e controllo Wi-Fi/DNS che segnala il DNS sano. 76 test automatici
 superati. La ISO scaricabile è costruita da GitHub Actions nella release
 [`sentinel-lite-v0.4.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.4.0-alpha);
 dimensione e SHA-256 della ISO pubblicata vengono aggiunti dopo il download e la verifica del checksum.
