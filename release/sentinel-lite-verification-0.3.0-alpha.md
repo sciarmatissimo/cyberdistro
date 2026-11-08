@@ -45,6 +45,11 @@ Difetto trovato nel laboratorio e corretto: se la scheda del router aveva anche 
 l'agente poteva scambiarlo per il router. Ora il router e gli indirizzi di questo PC vengono letti dal
 kernel.
 
+ISO pubblicata (GitHub Actions, 2 056 103 936 byte): scaricata dalla release, SHA-256 verificato,
+avviata come chiavetta USB con Secure Boot fino al desktop e riprovata nel laboratorio: blocco
+approvato (porta *filtered*), router fissato (`PERMANENT`, resiste a un nuovo spoofing), «Ferma
+l'agente» → «Sì» (blocco e router fissato annullati, porta di nuovo raggiungibile).
+
 ## Non ancora verificato
 - Hardware reale (il laboratorio è virtuale).
 - «Spiegamelo (AI)» nel laboratorio (la macchina virtuale non aveva RAM libera sufficiente per il modello).

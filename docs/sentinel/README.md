@@ -29,6 +29,11 @@ configurazione di LXQt, accesso automatico con `startx`).
 
 ### Sentinel Lite 0.3.0-alpha — l'agente
 
+Pubblicata nella release [`sentinel-lite-v0.3.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.3.0-alpha)
+(2 056 103 936 byte, SHA-256 `6965cc9cd4340fff927838199a7250c8e3ac7235ac29da147c46daca39666c88`, costruita da
+GitHub Actions): scaricata, checksum verificato, avviata con Secure Boot fino al desktop e riprovata in
+laboratorio (blocco approvato, router fissato, «Ferma l'agente» che annulla tutto).
+
 Aggiunge l'**agente di protezione** e la scheda **«Attività AI»** (vedi sotto). Provata in macchina
 virtuale con attacchi reali da un altro dispositivo. Dettagli:
 [`release/sentinel-lite-verification-0.3.0-alpha.md`](../../release/sentinel-lite-verification-0.3.0-alpha.md).
