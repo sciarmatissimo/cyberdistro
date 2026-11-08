@@ -78,13 +78,31 @@ class _Sig(QObject):
     done = Signal(object)
 
 
+# Strong references to in-flight jobs. A QRunnable autodeletes right after run()
+# returns; if the cross-thread "done" signal has not yet been delivered to the
+# GUI event loop, deleting the Job (and its _Sig sender) silently drops the
+# queued slot and the callback never fires — a UI control would stay stuck on
+# "…in corso". Holding the Job here until its callback has actually run keeps
+# the sender alive so the queued signal is always delivered.
+_LIVE_JOBS: set = set()
+
+
 class Job(QRunnable):
     """Run a function in the thread pool and deliver its result on the GUI thread."""
 
     def __init__(self, fn, cb):
         super().__init__()
+        self.setAutoDelete(False)                 # we manage the lifetime ourselves
         self.fn, self.sig = fn, _Sig()
-        self.sig.done.connect(cb)
+        self.sig.done.connect(self._deliver)
+        self._cb = cb
+        _LIVE_JOBS.add(self)
+
+    def _deliver(self, res):                       # runs on the GUI thread
+        try:
+            self._cb(res)
+        finally:
+            _LIVE_JOBS.discard(self)
 
     def run(self):
         try:
