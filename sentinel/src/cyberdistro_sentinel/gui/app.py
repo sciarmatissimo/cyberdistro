@@ -63,6 +63,7 @@ QPushButton { background: #ffffff; border: 1px solid #c4c7c5; border-radius: 8px
 QPushButton:hover { background: #f1f3f4; }
 QPushButton#primary { background: #1a73e8; color: white; border: none; font-weight: bold; }
 QPushButton#danger { background: #fce8e6; color: #a50e0e; border: 1px solid #f4c7c3; }
+QPushButton:disabled, QPushButton#danger:disabled, QPushButton#primary:disabled { background: #f1f3f4; color: #9aa0a6; border: 1px solid #e0e0e0; }
 QListWidget { background: #ffffff; border: 1px solid #dadce0; border-radius: 8px; }
 QTextBrowser, QLineEdit { background: #ffffff; border: 1px solid #dadce0; border-radius: 8px; padding: 6px; }
 """

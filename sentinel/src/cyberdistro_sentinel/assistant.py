@@ -436,7 +436,10 @@ def answer_question(q: str, status: dict, incidents: list[dict], devices: list[d
         if not att:
             return ("Non vedo tentativi di attacco in corso tra quelli che so riconoscere."
                     + (" Le scansioni che hai avviato tu non sono attacchi e le registro a parte." if mine else ""))
-        return "Sì, vedo: " + "; ".join(card(i, lang)["title"] + f" da {i.get('src') or i['facts'].get('new_mac') or '?'}" for i in att[:5]) + "."
+        return "Sì, vedo: " + "; ".join(
+            card(i, lang)["title"] + (" (origine: " + (addr(i.get("src"), i["facts"].get("src_role"), lang)
+                                                      if i.get("src") else (i["facts"].get("new_mac") or "?")) + ")")
+            for i in att[:5]) + "."
     if any(w in ql for w in ("sconosciut", "nuov", "unknown", "new device")):
         if not new:
             return f"Nessun dispositivo nuovo dall'avvio. Dispositivi visti: {len(devices)}."

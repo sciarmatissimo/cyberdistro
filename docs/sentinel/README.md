@@ -27,6 +27,16 @@ Build: `./build.sh --flavour kiosk` (predefinito) oppure `./build.sh --flavour l
 Lite è il profilo comune più la cartella `editions/sentinel/flavours/lite/` (pacchetti del desktop,
 configurazione di LXQt, accesso automatico con `startx`).
 
+### Sentinel Lite 0.2.0-alpha
+
+Distingue le scansioni avviate da te dagli attacchi, sa quali sono il router e questo PC, spiega le
+porte aperte trovate dagli esami e dà un piano d'azione. Dettagli e prove:
+[`release/sentinel-lite-verification-0.2.0-alpha.md`](../../release/sentinel-lite-verification-0.2.0-alpha.md).
+
+| Scansione avviata da te | Piano d'azione | Esame di un dispositivo |
+| --- | --- | --- |
+| ![Scansione](screenshots/lite02-scansione-tua.png) | ![Piano](screenshots/lite02-assistente-piano.png) | ![Rete](screenshots/lite02-rete-esame.png) |
+
 ### Sentinel Lite 0.1.0-alpha
 
 ISO pubblicata nella release [`sentinel-lite-v0.1.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.1.0-alpha)
@@ -61,6 +71,25 @@ stato VERDE a riposo, port scan dall'host rilevato con stato ROSSO. Dettagli: [`
 Requisiti: PC x86-64 con SSSE3 (Intel Core 2 / AMD Bulldozer o successivi), 4 GB di RAM per il
 monitoraggio, 8 GB consigliati per l'assistente AI, chiavetta USB da 4 GB.
 
+## L'assistente (0.2)
+
+Il "ragionamento" sulla sicurezza è deterministico, così una risposta è sempre corretta rispetto alle
+prove; il modello AI (2 miliardi di parametri) serve a riformulare e alle domande libere, sempre con
+il verificatore.
+
+- **Esamina questo dispositivo** (Nmap, 100 porte comuni, `-Pn`): il risultato è spiegato porta per
+  porta (cos'è, rischio alto/medio/basso, cosa fare: es. Telnet, RDP, SMB, VNC, telecamere RTSP) e
+  resta nella scheda del dispositivo.
+- Risposte immediate a: domande su un indirizzo ("chi è 192.168.1.20?"), "quanti computer/telefoni/…",
+  "cosa hanno trovato i miei esami", "qualcuno mi sta attaccando?" (le tue scansioni non contano).
+- **Piano d'azione** ("Cosa devo fare adesso?", "devo preoccuparmi?", "come proteggo la rete?"):
+  prima gli allarmi urgenti, poi le porte rischiose trovate dagli esami, i dispositivi nuovi, quelli
+  non ancora esaminati e le buone pratiche per il router.
+- Domande libere: il modello riceve il quadro della rete (questo PC, router, dispositivi con tipo e
+  produttore, allarmi con il "cosa fare", esami fatti con le porte spiegate), mai i nomi annunciati
+  dai dispositivi. Se la risposta viene scartata dal verificatore, il motivo compare sotto la chat.
+- Il sistema operativo dei dispositivi (Windows, Android…) non viene stimato: l'assistente lo dice.
+
 ## Architettura
 
 | Livello | Componenti | Dove nel repository |
@@ -89,7 +118,17 @@ sicurezza non presenti nei fatti viene scartata e l'utente vede la scheda scritt
 | beaconing | ≥ 6 connessioni verso lo stesso host esterno con intervallo regolare (CV ≤ 0,15, ≥ 10 s) | sospetto |
 | exfiltration | ≥ 200 MB verso un host esterno in 10 min | sospetto |
 | lateral_movement | un host interno verso ≥ 5 host interni su porte di amministrazione in 10 min | sospetto |
-| new_device | dispositivo comparso dopo i primi 2 minuti | informativo |
+| new_device | dispositivo comparso dopo i primi 2 minuti («trovato dalla tua scansione» se ha risposto a un esame avviato dall'utente) | informativo |
+| own_scan (0.2) | è **questo PC** a fare una scansione: avviata dal Security Center → informativa; non avviata da Sentinel → sospetta (un programma sul PC sta esplorando la rete) | confermato |
+
+Dalla 0.2 ogni incidente sa se l'origine o la destinazione è **questo PC** o **il router**: le schede
+lo dicono ("tra il router (192.168.1.1) e questo PC (192.168.1.35)") e i consigli si adattano (il
+router non va mai bloccato). Le firme Suricata delle categorie *Not Suspicious Traffic*, *Unknown
+Traffic* e *Generic Protocol Command Decode* sono registrate come informazioni, non allarmi. Le
+scansioni avviate dall'utente (Esamina dispositivo / Esamina la rete) sono registrate con inizio e
+fine: il traffico che provocano verso il loro bersaglio non diventa un allarme, mentre un attacco
+di un altro dispositivo nello stesso momento resta un allarme. NTP, DNS, SSDP e mDNS sono esclusi dal
+beaconing.
 
 Stato: **rosso** con almeno un evento confermato di gravità alta nell'ultima ora; **giallo** con
 eventi di gravità media o alta; **verde** altrimenti (non è una garanzia); **grigio** se manca la
@@ -101,8 +140,10 @@ rete o un motore non è attivo.
   dispositivi (servirebbe un port mirror).
 - Il traffico cifrato si analizza solo nei metadati.
 - Le soglie sono state tarate solo su traffico sintetico: vanno verificate su reti reali (falsi positivi).
-- L'assistente su 2 core impiega 20–60 secondi per risposta e richiede almeno 2,6 GB di RAM libera;
-  su PC con 4 GB resta spento.
+- L'assistente su 2 core impiega 20–60 secondi per risposta e richiede almeno 2,6 GB di RAM libera
+  (misurato: il server del modello occupa 2,0–2,3 GB); su PC con 4 GB resta spento. Con un modello
+  da 2B le domande libere complesse possono essere scartate dal verificatore: per i casi comuni ci
+  sono le risposte deterministiche.
 - Persistenza cifrata: script presente (`sudo cyberdistro-make-persistence`), non ancora provato
   su chiavetta reale in questa edizione.
 - Fino alla 0.1.0 il caricatore UEFI non era firmato: con Secure Boot attivo il PC non riconosceva

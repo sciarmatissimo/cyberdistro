@@ -159,6 +159,14 @@ class TestKnowledgeAndAssistant(unittest.TestCase):
         a = answer_question("Cosa devo fare adesso?", st, inc, dev, actions=act)
         self.assertIn("porta 23", a)
 
+    def test_attack_answer_names_this_pc(self):
+        st, inc, dev, act = self._world()
+        inc = [{"key": "o", "rule": "own_scan", "level": "confermato", "severity": "media", "src": ME, "dst": CAM,
+                "first_ts": 1, "last_ts": 2, "count": 1, "status": "aperto", "evidence": [],
+                "facts": {"kind": "porte", "ports": 300, "by_user": False, "src_role": "self"}}]
+        a = answer_question("Qualcuno sta cercando di attaccare la mia rete?", st, inc, dev, actions=act)
+        self.assertIn(f"origine: questo PC ({ME})", a)
+
     def test_network_facts_have_roles_ports_and_no_announced_names(self):
         st, inc, dev, act = self._world()
         dev[2]["hostname"] = "evil-name-from-network"
