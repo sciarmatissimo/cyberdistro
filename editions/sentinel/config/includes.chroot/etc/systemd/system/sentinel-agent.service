@@ -1,0 +1,23 @@
+[Unit]
+Description=CyberDistro Sentinel: agent (defensive proposals approved in the Security Center)
+After=sentinel-core.service
+
+[Service]
+Type=simple
+User=sentinel
+Group=sentinel
+# Unprivileged: it only reads Sentinel's logs/database and writes proposals.
+# Approved actions are executed by the Security Center through pkexec.
+ExecStart=/usr/local/bin/sentinel-agent
+UMask=0007
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+IPAddressDeny=any
+ReadWritePaths=/var/lib/sentinel
+CapabilityBoundingSet=
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
