@@ -27,6 +27,16 @@ Build: `./build.sh --flavour kiosk` (predefinito) oppure `./build.sh --flavour l
 Lite è il profilo comune più la cartella `editions/sentinel/flavours/lite/` (pacchetti del desktop,
 configurazione di LXQt, accesso automatico con `startx`).
 
+### Sentinel Lite 0.3.0-alpha — l'agente
+
+Aggiunge l'**agente di protezione** e la scheda **«Attività AI»** (vedi sotto). Provata in macchina
+virtuale con attacchi reali da un altro dispositivo. Dettagli:
+[`release/sentinel-lite-verification-0.3.0-alpha.md`](../../release/sentinel-lite-verification-0.3.0-alpha.md).
+
+| Blocco approvato | Router fissato contro l'ARP spoofing | Agente fermato: tutto annullato |
+| --- | --- | --- |
+| ![Blocco](screenshots/lite03-agente-blocco.png) | ![Router](screenshots/lite03-agente-router.png) | ![Fermo](screenshots/lite03-agente-fermo.png) |
+
 ### Sentinel Lite 0.2.0-alpha
 
 Pubblicata nella release [`sentinel-lite-v0.2.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.2.0-alpha)
@@ -75,6 +85,29 @@ stato VERDE a riposo, port scan dall'host rilevato con stato ROSSO. Dettagli: [`
 
 Requisiti: PC x86-64 con SSSE3 (Intel Core 2 / AMD Bulldozer o successivi), 4 GB di RAM per il
 monitoraggio, 8 GB consigliati per l'assistente AI, chiavetta USB da 4 GB.
+
+## L'agente di protezione (0.3)
+
+Un servizio separato (`sentinel-agent`, utente `sentinel`, senza privilegi) segue gli allarmi e applica
+dei *playbook* scritti a mano. Non è il modello AI a decidere: il modello serve solo a spiegare una
+proposta (pulsante «Spiegamelo (AI)», con il verificatore).
+
+| Allarme | Cosa propone l'agente |
+| --- | --- |
+| Scansione, tentativi di accesso, movimento laterale, firma Suricata da un altro dispositivo | bloccare quell'indirizzo **su questo PC** per 24 ore; con gravità alta anche salvare 60 s di traffico come prova |
+| Qualcuno si spaccia per il router (ARP spoofing) | fissare su questo PC il vero indirizzo hardware del router (quello visto per primo) |
+| Beaconing o esfiltrazione **da questo PC** | bloccare il server esterno e salvare la prova |
+| Dispositivo nuovo | esame Nmap, **solo** se hai dichiarato «questa è la mia rete» |
+| Ogni allarme di gravità media o alta | raccolta automatica del contesto dai log di Zeek (connessioni, porte, ricerche DNS): è passiva |
+
+- **Livelli**: «Chiede» (predefinito: nessuna azione senza «Approva») e «Osserva» (solo consigli).
+- **Regole fisse**: mai contro questo PC, il router o i server DNS (controllato anche da
+  `sentinel-action`); il router e gli indirizzi locali sono letti dal kernel; blocchi con scadenza;
+  ogni azione si annulla; al massimo 12 proposte l'ora; un rifiuto vale 24 ore.
+- **«Ferma l'agente»** rifiuta le proposte e annulla blocchi e router fissato.
+- Le azioni approvate passano da `pkexec sentinel-action` (`block`, `unblock`, `pin-gateway`,
+  `unpin-gateway`, `capture`); le prove vanno in `/var/lib/sentinel/evidence`.
+- Non tocca il router né gli altri dispositivi: protegge **questo PC**.
 
 ## L'assistente (0.2)
 

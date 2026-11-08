@@ -45,6 +45,7 @@ sezione Privacy. Disponibile in **due versioni**, scegli quella che ti serve:
 | All'avvio | solo il Security Center, a schermo intero | desktop leggero LXQt con il Security Center aperto |
 | Applicazioni in più | nessuna | file manager, terminale, editor di testo, Firefox |
 | Monitoraggio, AI locale, report | sì | sì, identici |
+| Agente di protezione con scheda «Attività AI» | non ancora (Kiosk 0.1.1) | sì, dalla Lite 0.3.0 |
 | Scegli se… | vuoi solo controllare la rete, nel modo più semplice | vuoi anche navigare, gestire file, usare il terminale |
 | Release | tag `sentinel-v*` (es. [`sentinel-v0.1.1-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-v0.1.1-alpha)) | tag `sentinel-lite-v*` (es. [`sentinel-lite-v0.1.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.1.0-alpha)) |
 | Dimensione ISO | < 2 000 MB | < 2 GiB |

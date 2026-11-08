@@ -129,8 +129,13 @@ def cardframe() -> tuple[QFrame, QVBoxLayout]:
 
 
 def confirm(parent, title, text) -> bool:
-    return QMessageBox.question(parent, title, text, QMessageBox.Yes | QMessageBox.No,
-                                QMessageBox.No) == QMessageBox.Yes
+    """Yes/no question with Italian buttons (Qt's standard ones are in English here)."""
+    box = QMessageBox(QMessageBox.Question, title, text, parent=parent)
+    yes = box.addButton("Sì", QMessageBox.YesRole)
+    no = box.addButton("No", QMessageBox.NoRole)
+    box.setDefaultButton(no)
+    box.exec()
+    return box.clickedButton() is yes
 
 
 # ------------------------------------------------------------------ data
@@ -675,7 +680,8 @@ class Main(QMainWindow):
                               + f" Ultimo controllo: {when(hb)}.")
         rows = [t for t in self.data.tasks if t["status"] in (ag.PROPOSTA, ag.CONSIGLIO, ag.IN_CORSO, ag.ATTIVA)]
         order = {ag.PROPOSTA: 0, ag.IN_CORSO: 1, ag.ATTIVA: 2, ag.CONSIGLIO: 3}
-        rows.sort(key=lambda t: (order[t["status"]], -t["ts"]))
+        rank = {"pin_gateway": 0, "block": 1, "examine": 2, "capture": 3}
+        rows.sort(key=lambda t: (order[t["status"]], -int(t["ts"] // 60), rank.get(t["action"], 9), -t["ts"]))
         n_pending = sum(1 for t in rows if t["status"] == ag.PROPOSTA)
         item = self.nav.item(self.pages["Attività AI"])
         item.setText("Attività AI" + (f"  ({n_pending})" if n_pending else ""))
