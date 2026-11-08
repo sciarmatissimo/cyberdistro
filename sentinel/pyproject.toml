@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cyberdistro-sentinel"
-version = "0.1.0"
+version = "0.2.0"
 description = "CyberDistro Sentinel — passive network monitoring, deterministic correlation and a local AI explainer"
 readme = "README.md"
 requires-python = ">=3.11"

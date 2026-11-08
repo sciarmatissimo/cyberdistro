@@ -78,7 +78,9 @@ def main(argv=None) -> int:
         print(json.dumps({"fonte": r["source"], "spiegazione": r["simple"], "problemi": r["problems"]},
                          indent=1, ensure_ascii=False))
     elif a.cmd == "ask":
-        print(answer_question(a.question, status, incs, devs) or "Domanda non riconosciuta: usa la sezione Assistente.")
+        acts = store.actions() if store else []
+        print(answer_question(a.question, status, incs, devs, actions=acts)
+              or "Domanda non riconosciuta: usa la sezione Assistente.")
     return 0
 
 

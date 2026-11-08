@@ -71,6 +71,10 @@ CARDS = {
                              "{src} ha aperto connessioni di amministrazione verso {hosts} dispositivi in {window_s} secondi.",
                              "È il modo in cui un attaccante si sposta da un dispositivo all'altro.",
                              "Scollega {src} dalla rete e controllalo."),
+        "own_scan": ("Questo PC sta esaminando la rete, ma non l'hai chiesto da Sentinel",
+                     "Questo PC ha contattato {target_desc} in modo simile a una scansione ({amount}).",
+                     "Se non hai avviato tu un programma di scansione, potrebbe farlo un programma indesiderato su questo PC.",
+                     "Se stai usando tu Nmap o un altro strumento dal terminale, va bene così. Altrimenti chiudi i programmi che non conosci e riavvia la chiavetta."),
     },
     "en": {
         "port_scan": ("Someone is probing a device's ports",
@@ -121,8 +125,96 @@ CARDS = {
                              "{src} opened administration connections to {hosts} devices in {window_s} seconds.",
                              "This is how an attacker moves from one device to another.",
                              "Disconnect {src} and check it."),
+        "own_scan": ("This PC is scanning the network, but not from Sentinel",
+                     "This PC contacted {target_desc} like a scan does ({amount}).",
+                     "If you did not start a scanning program, an unwanted program on this PC may be doing it.",
+                     "If you are running Nmap or another tool from the terminal, that is fine. Otherwise close programs you do not know and restart the stick."),
     },
 }
+
+
+# Variants chosen from the facts layer 2 attached (roles, user activity,
+# informational signatures). Same five answers, adapted to who is involved.
+VARIANTS = {
+    "it": {
+        ("own_scan", "by_user"): ("Scansione avviata da te",
+                                  "Hai chiesto a Sentinel di esaminare {target_desc}: questo PC lo ha contattato ({amount}).",
+                                  "Non è un attacco: è l'attività che hai avviato. Sentinel la registra per completezza.",
+                                  "Non serve fare nulla. Il risultato è nella sezione Rete e nella cronologia delle azioni."),
+        ("suricata_alert", "informational"): ("Il motore delle firme ha annotato traffico normale",
+                                              "Suricata ha riconosciuto la firma \"{signature}\" tra {src} e {dst}.",
+                                              "La firma è nella categoria \"{category}\": descrive traffico normalmente innocuo e viene registrata solo come informazione.",
+                                              "Non serve fare nulla."),
+        ("suricata_alert", "by_user"): ("Traffico causato dalla tua scansione",
+                                        "Suricata ha riconosciuto la firma \"{signature}\" tra {src} e {dst} mentre era in corso la scansione che hai avviato.",
+                                        "Le scansioni producono traffico insolito: questo avviso ne è quasi certamente un effetto.",
+                                        "Non serve fare nulla. Se l'avviso si ripete quando non stai facendo scansioni, ricontrollalo."),
+        ("suricata_alert", "src_gateway"): (None, None, None,
+                                            "L'origine è il router: non bloccarlo, perderesti la connessione. Se l'avviso si ripete, aggiorna il firmware del router e cambia la sua password di amministrazione."),
+        ("suricata_alert", "src_self"): (None, None, None,
+                                         "L'origine è questo PC: controlla quali programmi stai usando (browser, terminale) e chiudi quelli che non conosci."),
+        ("new_device", "found_by_scan"): ("Dispositivo trovato dalla tua scansione",
+                                          "{ip} (scheda {mac}) ha risposto alla scansione che hai avviato.",
+                                          "Probabilmente era già in rete ma non aveva ancora trasmesso nulla che Sentinel potesse sentire.",
+                                          "Controlla nella sezione Rete se lo riconosci; se no, cambia la password del Wi-Fi del router."),
+    },
+    "en": {
+        ("own_scan", "by_user"): ("Scan you started",
+                                  "You asked Sentinel to examine {target_desc}: this PC contacted it ({amount}).",
+                                  "This is not an attack: it is the activity you started. Sentinel records it for completeness.",
+                                  "Nothing to do. The result is in the Network section and in the action history."),
+        ("suricata_alert", "informational"): ("The signature engine noted normal traffic",
+                                              "Suricata matched the signature \"{signature}\" between {src} and {dst}.",
+                                              "The signature belongs to category \"{category}\": normally harmless traffic, recorded for information only.",
+                                              "Nothing to do."),
+        ("suricata_alert", "by_user"): ("Traffic caused by your scan",
+                                        "Suricata matched the signature \"{signature}\" between {src} and {dst} while your scan was running.",
+                                        "Scans produce unusual traffic: this alert is almost certainly a side effect.",
+                                        "Nothing to do. If it repeats when you are not scanning, check again."),
+        ("suricata_alert", "src_gateway"): (None, None, None,
+                                            "The source is the router: do not block it or you lose the connection. If it repeats, update the router firmware and change its admin password."),
+        ("suricata_alert", "src_self"): (None, None, None,
+                                         "The source is this PC: check which programs you are using and close the ones you do not know."),
+        ("new_device", "found_by_scan"): ("Device found by your scan",
+                                          "{ip} (card {mac}) answered the scan you started.",
+                                          "It was probably already on the network but had not sent anything Sentinel could hear.",
+                                          "Check in the Network section whether you recognise it; if not, change the router's Wi-Fi password."),
+    },
+}
+
+ROLE_NAME = {"it": {"self": "questo PC", "gateway": "il router"},
+             "en": {"self": "this PC", "gateway": "the router"}}
+SCAN_KIND = {"it": {"porte": "{ports} porte diverse di {dst}", "rete": "{hosts} dispositivi sulla porta {port}",
+                    "amministrazione": "{hosts} dispositivi su porte di amministrazione"},
+             "en": {"porte": "{ports} different ports of {dst}", "rete": "{hosts} devices on port {port}",
+                    "amministrazione": "{hosts} devices on administration ports"}}
+
+
+def addr(ip, role, lang: str = "it") -> str:
+    """'questo PC (192.168.1.35)' / 'il router (192.168.1.1)' / '192.168.1.20'."""
+    if not ip:
+        return "?"
+    name = ROLE_NAME.get(lang, ROLE_NAME["it"]).get(role or "")
+    return f"{name} ({ip})" if name else ip
+
+
+def variant_keys(inc: dict) -> list[str]:
+    f = inc.get("facts", {})
+    keys = []
+    if inc["rule"] == "own_scan" and f.get("by_user"):
+        keys.append("by_user")
+    if inc["rule"] == "suricata_alert":
+        if f.get("informational"):
+            keys.append("informational")
+        elif f.get("by_user"):
+            keys.append("by_user")
+        if f.get("src_role") == "gateway":
+            keys.append("src_gateway")
+        elif f.get("src_role") == "self":
+            keys.append("src_self")
+    if inc["rule"] == "new_device" and f.get("found_by_scan"):
+        keys.append("found_by_scan")
+    return keys
 
 
 class _Safe(dict):
@@ -133,9 +225,24 @@ class _Safe(dict):
 def card(inc: dict, lang: str = "it") -> dict:
     lang = lang if lang in CARDS else "it"
     tpl = CARDS[lang].get(inc["rule"])
-    vals = _Safe({**inc.get("facts", {}), "src": inc.get("src") or "?", "dst": inc.get("dst") or "?"})
+    f = inc.get("facts", {})
+    vals = _Safe({**f, "src": addr(inc.get("src"), f.get("src_role"), lang),
+                  "dst": addr(inc.get("dst"), f.get("dst_role"), lang)})
+    if inc["rule"] == "own_scan":
+        kind = SCAN_KIND[lang].get(f.get("kind"), SCAN_KIND[lang]["porte"])
+        vals["amount"] = kind.format_map(vals)
+        vals["target_desc"] = (addr(inc.get("dst"), f.get("dst_role"), lang) if inc.get("dst")
+                               else ("la rete locale" if lang == "it" else "the local network"))
     if tpl is None:
         tpl = ("Evento di sicurezza" if lang == "it" else "Security event", inc["rule"], "", "")
+    tpl = list(tpl)
+    applied = False
+    for k in variant_keys(inc):
+        v = VARIANTS[lang].get((inc["rule"], k))
+        if not v or (applied and k.startswith("src_")):
+            continue                            # a by-user/informational card already says what to do
+        tpl = [new if new is not None else old for old, new in zip(tpl, v)]
+        applied = True
     title, what, why, todo = (t.format_map(vals) for t in tpl)
     when = datetime.fromtimestamp(inc["last_ts"]).strftime("%d/%m %H:%M:%S")
     ev_label = "Prove" if lang == "it" else "Evidence"

@@ -29,7 +29,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
                                QSizePolicy, QSplitter, QStackedWidget, QTextBrowser, QVBoxLayout, QWidget)
 
 from .. import __version__
-from ..assistant import LLM, answer_free, answer_question, explain, summary_facts
+from ..assistant import LLM, answer_free, answer_question, describe_device, explain, last_scan_of, network_facts
+from ..knowledge import parse_nmap_open, ports_from_result, summarize_ports
 from ..config import Paths
 from ..devices import TYPE_LABEL, guess_type, vendor
 from ..report import write as write_report
@@ -44,7 +45,8 @@ HEAD = {"verde": "Nessuna attività sospetta importante rilevata",
 SEV_COL = {"alta": "#c5221f", "media": "#d29b00", "bassa": "#5f6368"}
 QUICK_QUESTIONS = ["La mia rete è sicura?", "Qualcuno sta cercando di attaccare la mia rete?",
                    "Ci sono dispositivi sconosciuti?", "Hai notato qualcosa di insolito nell'ultima ora?",
-                   "Cosa devo fare adesso?", "Spiegami l'ultimo allarme senza termini tecnici"]
+                   "Cosa devo fare adesso?", "Spiegami l'ultimo allarme senza termini tecnici",
+                   "Cosa hanno trovato i miei esami (porte aperte)?", "Quanti computer ci sono in rete?"]
 
 CSS = """
 QWidget { font-family: 'DejaVu Sans'; font-size: 15px; color: #202124; }
@@ -391,7 +393,8 @@ class Main(QMainWindow):
         self.tiles["dev"].setText(str(len(self.data.devices)))
         self.tiles["alerts"].setText(str(len(open_)))
         self.tiles["last"].setText(when(st.get("last")) if st.get("last") else "nessuna")
-        self.h_summary.setText(answer_question("La mia rete è sicura?", st, self.data.incidents, self.data.devices)
+        self.h_summary.setText(answer_question("La mia rete è sicura?", st, self.data.incidents, self.data.devices,
+                                               actions=self.data.actions)
                                + ("\n" + answer_question("Ci sono dispositivi sconosciuti?", st,
                                                           self.data.incidents, self.data.devices)))
 
@@ -412,6 +415,7 @@ class Main(QMainWindow):
         b1 = QPushButton("Esamina questo dispositivo (Nmap)")
         b1.clicked.connect(lambda: self.scan_device())
         b2 = QPushButton("Blocca su questo PC")
+        self.b_dev_block = b2
         b2.setObjectName("danger")
         b2.clicked.connect(lambda: self.block(self.sel_dev.get("ip") if self.sel_dev else None))
         dl.addWidget(b1)
@@ -441,9 +445,17 @@ class Main(QMainWindow):
         for i in rel[:8]:
             txt += f"<li>{e(card(i)['title'])} ({e(i['severity'])})</li>"
         txt += "</ul>"
+        sc = last_scan_of(d.get("ip"), self.data.actions) if d.get("ip") else None
+        if sc:
+            txt += f"<p><b>Ultimo esame ({when(sc['ts'])}):</b></p><p>" + e(
+                summarize_ports(ports_from_result(sc.get("result", "")))).replace("\n", "<br>") + "</p>"
         if self.advanced and d.get("services"):
             txt += "<p><b>Servizi mDNS:</b> " + e(", ".join(d["services"])) + "</p>"
         self.dev_info.setHtml(txt)
+        role = "self" if d.get("is_self") else "gateway" if d.get("is_gateway") else None
+        self.b_dev_block.setEnabled(role is None)
+        self.b_dev_block.setToolTip({"self": "È questo PC.", "gateway": "È il router: bloccarlo interromperebbe "
+                                     "la connessione."}.get(role, ""))
 
     # ---------------------------------------------------------------- Protezione
     def page_protection(self, v):
@@ -481,11 +493,25 @@ class Main(QMainWindow):
         keep = self.selected_inc.get("key") if self.selected_inc else None
         self.inc_list.blockSignals(True)
         self.inc_list.clear()
-        self._inc_rows = [i for i in self.data.incidents if self.advanced or i["severity"] != "bassa"
-                          or i["rule"] == "new_device"]
+        rows = [i for i in self.data.incidents if self.advanced or i["severity"] != "bassa"
+                or i["rule"] in ("new_device", "own_scan")]
+        news = [i for i in rows if i["rule"] == "new_device"]
+        if len(news) > 2:                       # one row for many "new device" events
+            g = {"key": "group:new_device", "rule": "group_new_device", "severity": "bassa", "level": "confermato",
+                 "last_ts": max(i["last_ts"] for i in news), "status": "aperto", "items": news, "facts": {},
+                 "src": None, "dst": None, "evidence": []}
+            first = rows.index(news[0])
+            rows = [i for i in rows if i["rule"] != "new_device"]
+            rows.insert(min(first, len(rows)), g)
+        self._inc_rows = rows
         sel = -1
         for n, i in enumerate(self._inc_rows):
-            c = card(i)
+            if i["rule"] == "group_new_device":
+                byscan = sum(1 for x in i["items"] if x["facts"].get("found_by_scan"))
+                c = {"title": f"{len(i['items'])} dispositivi nuovi in rete"
+                              + (f" ({byscan} trovati dalla tua scansione)" if byscan else "")}
+            else:
+                c = card(i)
             it = QListWidgetItem(f"● {c['title']}\n{when(i['last_ts'])} · {i['level']}"
                                  + ("" if i.get("status") == "aperto" else " · gestito"))
             it.setForeground(QColor(SEV_COL[i["severity"]]))
@@ -512,8 +538,17 @@ class Main(QMainWindow):
         i = self._inc_rows[row]
         self.selected_inc = i
         self._shown_key = i["key"]
+        if i.get("rule") == "group_new_device":
+            self.show_group(i)
+            return
         c = card(i)
         e = html.escape
+        f = i.get("facts", {})
+        can_block = (i.get("src") and f.get("src_role") not in ("self", "gateway") and i["severity"] != "bassa"
+                     and i["rule"] != "own_scan")
+        self.b_block.setEnabled(bool(can_block))
+        self.b_block.setToolTip("" if can_block else "Non c'è un'origine da bloccare: è questo PC, il router "
+                                "oppure un evento solo informativo.")
         h = (f"<h2 style='color:{SEV_COL[i['severity']]}'>{e(c['title'])}</h2>"
              f"<p><i>{e(c['level'])}</i></p>"
              f"<h4>1. Cosa è successo</h4><p>{e(c['what'])}</p>"
@@ -529,6 +564,21 @@ class Main(QMainWindow):
                  "ultima": datetime.fromtimestamp(i["last_ts"]).isoformat(timespec="seconds")},
                 indent=1, ensure_ascii=False)) + "</pre>")
         self.inc_view.setHtml(h)
+
+    def show_group(self, g):
+        e = html.escape
+        self.b_block.setEnabled(False)
+        h = ("<h2>Dispositivi comparsi dopo l'avvio</h2><p>Sono dispositivi che Sentinel ha sentito per la prima "
+             "volta dopo i primi minuti di monitoraggio. Quelli «trovati dalla tua scansione» erano quasi certamente "
+             "già in rete: hanno solo risposto all'esame. Se non riconosci un dispositivo, cambia la password del "
+             "Wi-Fi del router.</p><ul>")
+        devs = {d.get("ip"): d for d in self.data.devices}
+        for i in g["items"]:
+            ip = i["facts"].get("ip") or "?"
+            d = devs.get(ip)
+            desc = describe_device(d, self.data.incidents, self.data.actions) if d else ip
+            h += f"<li>{e(desc)}" + (" — <i>trovato dalla tua scansione</i>" if i["facts"].get("found_by_scan") else "") + "</li>"
+        self.inc_view.setHtml(h + "</ul>")
 
     def ai_explain(self):
         if not self.selected_inc:
@@ -600,7 +650,7 @@ class Main(QMainWindow):
     def say(self, who, text):
         e = html.escape
         col = "#174ea6" if who == "Tu" else "#202124"
-        self.chat.append(f"<p><b style='color:{col}'>{e(who)}:</b> {e(text)}</p>")
+        self.chat.append(f"<p><b style='color:{col}'>{e(who)}:</b> " + e(text).replace("\n", "<br>") + "</p>")
 
     def ask(self, q):
         q = (q or "").strip()
@@ -618,7 +668,7 @@ class Main(QMainWindow):
             self.say("Sentinel", f"{c['what']} {c['why']} Cosa fare: {c['todo']} {c['urgency']}")
             self.selected_inc = open_[0]
             return
-        ans = answer_question(q, d.status, d.incidents, d.devices)
+        ans = answer_question(q, d.status, d.incidents, d.devices, actions=d.actions)
         if ans:
             self.say("Sentinel", ans)
             return
@@ -628,7 +678,7 @@ class Main(QMainWindow):
                                  "Prova una delle domande rapide.")
             return
         self.ai_state.setText("L'assistente sta pensando (su un PC a 2 core può servire mezzo minuto)…")
-        facts = summary_facts(d.status, d.incidents, d.devices)
+        facts = network_facts(d.status, d.incidents, d.devices, d.actions)
 
         def done(res):
             self.ai_state.setText("")
@@ -641,6 +691,8 @@ class Main(QMainWindow):
             else:
                 self.say("Sentinel", "Non posso rispondere con certezza a questa domanda con le prove che ho. "
                                      + answer_question("La mia rete è sicura?", d.status, d.incidents, d.devices))
+                if probs:                       # say why, so the user (and we) can tell what went wrong
+                    self.ai_state.setText("Risposta del modello scartata: " + probs[0][:160])
         self.pool.start(Job(lambda: answer_free(q, facts, self.llm, self.lang), done))
 
     # ---------------------------------------------------------------- Report
@@ -780,12 +832,18 @@ class Main(QMainWindow):
                        "Confermi di avere il permesso?"):
             return
         self.say_status(f"Scansione di {netw} in corso…")
+        st = self.data.store()
+        aid = st.log_action("scansione rete", str(netw), "in corso") if st else None
 
         def done(res):
             code, out = res if not isinstance(res, Exception) else (1, str(res))
             n = out.count("Host is up")
+            if st and aid:
+                st.finish_action(aid, f"dispositivi che hanno risposto: {n}")
             QMessageBox.information(self, "Esamina", f"Dispositivi che hanno risposto: {n}.\n"
-                                    "Compariranno nella mappa man mano che Sentinel li sente in rete.")
+                                    "Compariranno nella mappa man mano che Sentinel li sente in rete.\n\n"
+                                    "Sentinel registra questa scansione come attività tua, non come attacco.")
+            self.refresh()
         self.pool.start(Job(lambda: run(["nmap", "-sn", "-T3", str(netw)], 600), done))
 
     def scan_device(self):
@@ -797,13 +855,30 @@ class Main(QMainWindow):
                        "Fallo SOLO se il dispositivo è tuo o hai il permesso. Confermi?"):
             return
 
+        st = self.data.store()
+        aid = st.log_action("scansione dispositivo", d["ip"], "in corso") if st else None
+        self.say_status(f"Esame di {d['ip']} in corso…")
+
         def done(res):
             code, out = res if not isinstance(res, Exception) else (1, str(res))
-            ports = [l for l in out.splitlines() if "/tcp" in l and "open" in l]
-            msg = ("Porte aperte:\n" + "\n".join(ports)) if ports else "Nessuna porta comune aperta."
+            ports = parse_nmap_open(out)
+            ok = code == 0 and "Nmap done" in out
+            result = (("porte aperte: " + ", ".join(map(str, ports))) if ports else "nessuna porta comune aperta") \
+                if ok else "esame non riuscito"
+            if st and aid:
+                st.finish_action(aid, result)
+            if not ok:
+                msg = "L'esame non è riuscito.\n" + out[-400:]
+            else:
+                msg = summarize_ports(ports)
+                msg += ("\n\nSentinel ha controllato le 100 porte più comuni. Questa scansione è registrata come "
+                        "attività tua: non comparirà come attacco.")
             if self.advanced:
-                msg += "\n\nComando: nmap -sT -F " + d["ip"]
+                msg += "\n\nComando: nmap -sT -F -T3 " + d["ip"]
             QMessageBox.information(self, f"Risultato per {d['ip']}", msg)
+            self.refresh()
+            if self.sel_dev and self.sel_dev.get("ip") == d["ip"]:
+                self.show_device(self.sel_dev)
         self.pool.start(Job(lambda: run(["nmap", "-sT", "-F", "-T3", d["ip"]], 600), done))
 
     def say_status(self, text):

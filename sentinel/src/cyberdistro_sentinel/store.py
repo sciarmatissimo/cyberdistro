@@ -39,6 +39,10 @@ class Store:
         self.db = sqlite3.connect(str(self.path), timeout=5)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        try:                                        # added in 0.2: end of a user-started scan
+            self.db.execute("ALTER TABLE actions ADD COLUMN end_ts REAL")
+        except sqlite3.OperationalError:
+            pass
 
     # ---------------------------------------------------------- writes
     def upsert_incident(self, i: Incident) -> None:
@@ -72,6 +76,17 @@ class Store:
                               (time.time(), action, target, result))
         self.db.commit()
         return cur.lastrowid
+
+    def finish_action(self, action_id: int, result: str) -> None:
+        """Close a user-started scan: its end bounds the "your own activity" window."""
+        self.db.execute("UPDATE actions SET end_ts=?, result=? WHERE id=?", (time.time(), result, action_id))
+        self.db.commit()
+
+    def scan_windows(self, since: float = 0.0) -> list[tuple]:
+        """(start, end, kind, target) of the scans the user started from the Security Center."""
+        rows = self.db.execute("SELECT ts, end_ts, action, target FROM actions "
+                               "WHERE action LIKE 'scansione%' AND ts>=?", (since,)).fetchall()
+        return [(r["ts"], r["end_ts"], r["action"], r["target"]) for r in rows]
 
     def mark_undone(self, action_id: int) -> None:
         self.db.execute("UPDATE actions SET undone_ts=? WHERE id=?", (time.time(), action_id))

@@ -14,6 +14,7 @@ here only.
 
 from __future__ import annotations
 
+import ipaddress
 import statistics
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -25,6 +26,11 @@ CONFIRMED, SUSPICIOUS = "confermato", "sospetto"
 LOW, MEDIUM, HIGH = "bassa", "media", "alta"
 SCAN_STATES = {"S0", "REJ", "RSTO", "RSTOS0", "RSTR", "RSTRH", "SH", "SHR", "OTH"}
 MAX_EVIDENCE = 20
+# Suricata categories that describe normal traffic: recorded, never an alarm.
+INFO_CATEGORIES = {"Not Suspicious Traffic", "Unknown Traffic", "Generic Protocol Command Decode"}
+# Periodic by design (time sync, DNS, discovery): never "beaconing".
+BEACON_SKIP_PORTS = {53, 123, 1900, 5353}
+USER_GRACE = 30.0          # seconds after the end of a scan the user started
 
 
 @dataclass
@@ -91,6 +97,8 @@ class Correlator:
         self.gateway: str | None = None
         self.self_ip: str | None = None
         self.start_ts: float | None = None
+        # Activity the user started from the Security Center: (start, end, kind, target)
+        self.user_windows: list[tuple[float, float, str, str]] = []
         self.last_ts: dict[str, float] = {}           # per engine: last record seen
         w = defaultdict
         self._scan = w(lambda: Window(self.th.scan_window))
@@ -103,6 +111,34 @@ class Correlator:
         self._lateral = w(lambda: Window(self.th.lateral_window))
 
     # ------------------------------------------------------------ helpers
+    def set_user_activity(self, windows) -> None:
+        """Scans the user started (from the actions table): [(start, end|None, kind, target)]."""
+        self.user_windows = [(float(a), float(b) if b else float(a) + 900.0, k, t) for a, b, k, t in windows]
+
+    def by_user(self, ts: float, peer: str | None = None) -> bool:
+        """True if ``ts`` falls in a scan the user started; with ``peer``, the other
+        endpoint must also be the scan's target (address or network) or the router."""
+        for a, b, _kind, target in self.user_windows:
+            if not (a - 5.0 <= ts <= b + USER_GRACE):
+                continue
+            if peer is None or peer == self.gateway:
+                return True
+            try:
+                if ipaddress.ip_address(peer) in ipaddress.ip_network(target, strict=False):
+                    return True
+            except ValueError:
+                continue
+        return False
+
+    def role(self, ip) -> str | None:
+        if not ip:
+            return None
+        if ip == self.self_ip:
+            return "self"
+        if ip == self.gateway:
+            return "gateway"
+        return None
+
     def _raise(self, key, rule, level, severity, ev: Event, facts, refs, src=..., dst=...):
         inc = self.incidents.get(key)
         if inc is None:
@@ -110,6 +146,10 @@ class Correlator:
                            src=ev.src if src is ... else src,
                            dst=ev.dst if dst is ... else dst,
                            first_ts=ev.ts, last_ts=ev.ts, facts=dict(facts))
+            for side in ("src", "dst"):
+                r = self.role(getattr(inc, side))
+                if r:
+                    inc.facts[f"{side}_role"] = r
             self.incidents[key] = inc
         else:
             inc.last_ts = ev.ts
@@ -146,9 +186,12 @@ class Correlator:
             if ip and ip == self.self_ip:
                 d.is_self = True
             if new and not d.is_self:
+                f = {"mac": mac, "ip": ip}
+                if self.by_user(ts):
+                    f["found_by_scan"] = True       # it answered the user's scan: it was already there
                 self._raise(f"new_device:{k}", "new_device", CONFIRMED, LOW,
                             Event(ts=ts, engine="sensor", kind="device", ref=f"device:{k}", src=ip),
-                            {"mac": mac, "ip": ip}, [f"device:{k}"])
+                            f, [f"device:{k}"])
         d.last_seen = max(d.last_seen, ts)
         if ip:
             d.ip = ip
@@ -222,9 +265,25 @@ class Correlator:
     def _on_suricata_alert(self, ev):
         sev = {1: HIGH, 2: MEDIUM}.get(ev.data.get("severity"), LOW)
         sid = ev.data.get("signature_id")
-        self._raise(f"suricata:{sid}:{ev.src}:{ev.dst}", "suricata_alert", CONFIRMED, sev, ev,
-                    {"signature": ev.data.get("signature"), "category": ev.data.get("category"),
-                     "signature_id": sid}, [ev.ref])
+        cat = ev.data.get("category")
+        f = {"signature": ev.data.get("signature"), "category": cat, "signature_id": sid}
+        if cat in INFO_CATEGORIES:
+            f["informational"] = True
+            sev = LOW
+        elif self.self_ip in (ev.src, ev.dst) and self.by_user(
+                ev.ts, peer=ev.dst if ev.src == self.self_ip else ev.src):
+            f["by_user"] = True                     # side effect of a scan the user started
+            sev = LOW
+        self._raise(f"suricata:{sid}:{ev.src}:{ev.dst}", "suricata_alert", CONFIRMED, sev, ev, f, [ev.ref])
+
+    def _own(self, ev, kind, facts, refs, dst=...):
+        """This PC is the one scanning/connecting. Started by the user = information;
+        not started by the user = a program on this PC is doing it (suspicious)."""
+        target = ev.dst if dst is ... else dst
+        mine = self.by_user(ev.ts, peer=target)
+        return self._raise(f"own:{kind}:{target or 'rete'}:{'user' if mine else 'auto'}", "own_scan",
+                           CONFIRMED, LOW if mine else MEDIUM, ev,
+                           {**facts, "kind": kind, "by_user": mine}, refs, dst=target)
 
     # ------------------------------------------------------------ zeek
     def _on_zeek_conn(self, ev):
@@ -239,14 +298,19 @@ class Correlator:
             w = self._scan[(src, dst)]
             w.add(ev.ts, dport, ev.ref)
             ports = set(w.values())
-            if len(ports) >= th.scan_ports:
+            if len(ports) >= th.scan_ports and src == self.self_ip:
+                self._own(ev, "porte", {"ports": len(ports), "window_s": int(th.scan_window)}, w.refs()[-5:])
+            elif len(ports) >= th.scan_ports:
                 self._raise(f"port_scan:{src}:{dst}", "port_scan", CONFIRMED,
                             HIGH if dst == self.self_ip else MEDIUM, ev,
                             {"ports": len(ports), "window_s": int(th.scan_window)}, w.refs()[-5:])
             s = self._sweep[(src, dport)]
             s.add(ev.ts, dst, ev.ref)
             hosts = set(s.values())
-            if len(hosts) >= th.sweep_hosts:
+            if len(hosts) >= th.sweep_hosts and src == self.self_ip:
+                self._own(ev, "rete", {"hosts": len(hosts), "port": dport, "window_s": int(th.scan_window)},
+                          s.refs()[-5:], dst=None)
+            elif len(hosts) >= th.sweep_hosts:
                 self._raise(f"sweep:{src}:{dport}", "host_sweep", CONFIRMED, MEDIUM, ev,
                             {"hosts": len(hosts), "port": dport, "window_s": int(th.scan_window)},
                             s.refs()[-5:], dst=None)
@@ -255,7 +319,9 @@ class Correlator:
             w = self._brute[(src, dst, dport)]
             w.add(ev.ts, 1, ev.ref)
             n = len(w.values())
-            if n >= th.brute_conns:
+            if n >= th.brute_conns and src == self.self_ip and self.by_user(ev.ts):
+                pass                                # the user's own scan touching a login port
+            elif n >= th.brute_conns:
                 self._raise(f"brute:{src}:{dst}:{dport}", "brute_force", CONFIRMED,
                             HIGH if dst == self.self_ip else MEDIUM, ev,
                             {"attempts": n, "port": dport, "window_s": int(th.brute_window)},
@@ -265,7 +331,10 @@ class Correlator:
             w = self._lateral[src]
             w.add(ev.ts, dst, ev.ref)
             hosts = set(w.values())
-            if len(hosts) >= th.lateral_hosts:
+            if len(hosts) >= th.lateral_hosts and src == self.self_ip and self.by_user(ev.ts):
+                self._own(ev, "amministrazione", {"hosts": len(hosts), "window_s": int(th.lateral_window)},
+                          w.refs()[-5:], dst=None)
+            elif len(hosts) >= th.lateral_hosts:
                 self._raise(f"lateral:{src}", "lateral_movement", SUSPICIOUS, MEDIUM, ev,
                             {"hosts": len(hosts), "window_s": int(th.lateral_window)},
                             w.refs()[-5:], dst=None)
@@ -280,6 +349,8 @@ class Correlator:
                     self._raise(f"exfil:{src}:{dst}", "exfiltration", SUSPICIOUS, MEDIUM, ev,
                                 {"megabytes": round(total / 1048576), "window_s": int(th.exfil_window)},
                                 w.refs()[-5:])
+            if dport in BEACON_SKIP_PORTS:
+                return
             b = self._beacon[(src, dst, dport)]
             b.append((ev.ts, ev.ref))
             if len(b) > 50:
@@ -302,7 +373,7 @@ class Correlator:
             w = self._nx[src]
             w.add(ev.ts, q, ev.ref)
             n = len(set(w.values()))
-            if n >= th.nxdomain_count:
+            if n >= th.nxdomain_count and not (src == self.self_ip and self.by_user(ev.ts)):
                 self._raise(f"nxdomain:{src}", "dns_nxdomain_burst", SUSPICIOUS, MEDIUM, ev,
                             {"domains": n, "window_s": int(th.nxdomain_window)}, w.refs()[-5:], dst=None)
         labels = q.split(".")

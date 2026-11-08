@@ -11,4 +11,4 @@ Three layers:
                  verifier. The model never decides the colour.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

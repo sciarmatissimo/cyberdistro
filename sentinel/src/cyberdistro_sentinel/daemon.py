@@ -101,6 +101,7 @@ def flush(corr: Correlator, store: Store) -> None:
 
 def replay(paths: Paths, store: Store, th: Thresholds) -> Correlator:
     corr = Correlator(th)
+    corr.set_user_activity(store.scan_windows())
     corr.run(load_offline(paths.suricata_eve, paths.zeek_dir, paths.sensor_log))
     flush(corr, store)
     return corr
@@ -125,6 +126,10 @@ def run(paths: Paths, th: Thresholds, interval: float = 2.0) -> None:
                 if ev:
                     batch.append(ev)
         batch.sort(key=lambda e: e.ts)
+        try:                                        # scans the user started: their own activity
+            corr.set_user_activity(store.scan_windows(time.time() - 86400))
+        except Exception:                           # noqa: BLE001 — never stop monitoring for this
+            pass
         for ev in batch:
             corr.process(ev)
         flush(corr, store)
