@@ -36,10 +36,12 @@ da chiavetta USB fino al desktop, provando a mano tutti e tre gli strumenti con 
 censimento della /24 (richieste ARP a tutti gli indirizzi), protezione automatica che fissa il router
 al suo vero indirizzo hardware, ispezione del traffico avviata e poi fermata con la rete ripristinata
 (inoltro IP tornato a zero), e controllo Wi-Fi/DNS che segnala il DNS sano. 76 test automatici
-superati. La ISO scaricabile è costruita da GitHub Actions nella release
-[`sentinel-lite-v0.4.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.4.0-alpha);
-dimensione e SHA-256 della ISO pubblicata vengono aggiunti dopo il download e la verifica del checksum.
-Dettagli e prove: [`release/sentinel-lite-verification-0.4.0-alpha.md`](../../release/sentinel-lite-verification-0.4.0-alpha.md).
+superati. ISO pubblicata nella release [`sentinel-lite-v0.4.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.4.0-alpha)
+(2 055 956 480 byte, SHA-256 `17777869e3ac5c8de4f4b827b3fd167de5830647ccbf79075cfdbaf0f757485d`, costruita da
+GitHub Actions): scaricata, checksum verificato, avviata con Secure Boot fino al desktop (stato VERDE,
+monitoraggio attivo) e riprovata in laboratorio sulla ISO pubblicata — censimento della /24
+(`sent=253`) e controllo Wi-Fi/DNS che mostra il risultato. Dettagli e prove:
+[`release/sentinel-lite-verification-0.4.0-alpha.md`](../../release/sentinel-lite-verification-0.4.0-alpha.md).
 
 | Attività AI (la mia rete) | Ispezione: consenso | Protezione automatica |
 | --- | --- | --- |

@@ -56,9 +56,15 @@ regolarmente.
 
 ## ISO pubblicata
 
-Costruita da GitHub Actions nella release `sentinel-lite-v0.4.0-alpha`. Dimensione e SHA-256 della ISO
-pubblicata, e l'esito della riprova dopo il download (checksum, avvio con Secure Boot, strumenti 2a/2b/2c),
-vengono aggiunti qui dopo la verifica.
+Costruita da GitHub Actions nella release `sentinel-lite-v0.4.0-alpha` (pre-release):
+`CyberDistro-Sentinel-Lite-Q3_K_M-x86_64.iso`, **2 055 956 480 byte** (sotto il limite di 2 GiB),
+SHA-256 **`17777869e3ac5c8de4f4b827b3fd167de5830647ccbf79075cfdbaf0f757485d`**.
+
+Riprova sulla ISO pubblicata: scaricata dalla release, **checksum verificato** (`sha256sum -c` → OK);
+avviata in QEMU come chiavetta USB con **OVMF Secure Boot** (shim firmato Microsoft + GRUB firmato
+Debian): menu GRUB grafico corretto e avvio **fino al desktop** con il Security Center in stato VERDE e
+monitoraggio attivo; riprovati sulla ISO pubblicata il **controllo Wi-Fi/DNS** (finestra «[OK] Il DNS
+della rete risponde correttamente») e il **censimento** della /24 (`{"kind":"census","sent":253}`).
 
 ## Non ancora verificato
 - Hardware reale (il laboratorio è virtuale).
