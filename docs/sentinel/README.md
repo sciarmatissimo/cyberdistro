@@ -29,6 +29,11 @@ configurazione di LXQt, accesso automatico con `startx`).
 
 ### Sentinel Lite 0.2.0-alpha
 
+Pubblicata nella release [`sentinel-lite-v0.2.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.2.0-alpha)
+(2 056 069 120 byte, SHA-256 `813c83c63b99510ee4733873c2fa9e437867d2e52da931a3b8968ac09e23b948`, costruita da
+GitHub Actions): scaricata, checksum verificato, avviata con Secure Boot fino al desktop e riprovata
+con la scansione Nmap (scansione tua → verde; scansione non richiesta → giallo).
+
 Distingue le scansioni avviate da te dagli attacchi, sa quali sono il router e questo PC, spiega le
 porte aperte trovate dagli esami e dà un piano d'azione. Dettagli e prove:
 [`release/sentinel-lite-verification-0.2.0-alpha.md`](../../release/sentinel-lite-verification-0.2.0-alpha.md).

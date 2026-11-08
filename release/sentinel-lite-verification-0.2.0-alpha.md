@@ -46,6 +46,10 @@ d'azione). Modello Qwen3.5-2B provato sul nuovo quadro della rete: risposte corr
 semplici, ma su domande complesse può attribuire male gli eventi; per questo i casi comuni hanno
 risposte deterministiche e il verificatore resta attivo. Server del modello misurato a 2,0–2,3 GB.
 
+ISO pubblicata (GitHub Actions, 2 056 069 120 byte): scaricata dalla release, SHA-256 verificato,
+avviata come chiavetta USB in UEFI con Secure Boot fino al desktop (stato VERDE) e riprovata con le
+stesse due scansioni: stessi risultati.
+
 ## Non ancora verificato
 - Hardware reale con questa versione (la Lite 0.1.0 si avvia sul Dell).
 - Una vera porta rischiosa (es. Telnet) su un dispositivo reale: la spiegazione è provata nei test.
