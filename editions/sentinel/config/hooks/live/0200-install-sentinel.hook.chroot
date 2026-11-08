@@ -7,12 +7,12 @@ SRC=/opt/cyberdistro-src
 rm -rf /usr/lib/python3/dist-packages/cyberdistro_sentinel
 cp -a "$SRC/sentinel/src/cyberdistro_sentinel" /usr/lib/python3/dist-packages/
 python3 -m compileall -q /usr/lib/python3/dist-packages/cyberdistro_sentinel
-for ep in "sentinel-core:daemon" "sentinel-sensor:sensor" "sentinel:cli" "sentinel-gui:gui.app"; do
+for ep in "sentinel-core:daemon" "sentinel-sensor:sensor" "sentinel:cli" "sentinel-gui:gui.app" "sentinel-agent:agent"; do
     name="${ep%%:*}"; mod="${ep#*:}"
     printf '#!/usr/bin/python3\nimport sys\nfrom cyberdistro_sentinel.%s import main\nsys.exit(main())\n' "$mod" > "/usr/local/bin/$name"
     chmod 755 "/usr/local/bin/$name"
 done
-python3 -c "import cyberdistro_sentinel.daemon, cyberdistro_sentinel.sensor, cyberdistro_sentinel.assistant"
+python3 -c "import cyberdistro_sentinel.daemon, cyberdistro_sentinel.sensor, cyberdistro_sentinel.assistant, cyberdistro_sentinel.agent"
 install -D -m755 "$SRC/privacy/bin/privacy-mode" /usr/local/sbin/privacy-mode
 install -D -m644 "$SRC/privacy/nftables/killswitch.nft" /usr/share/cyberdistro/privacy/killswitch.nft
 install -D -m755 "$SRC/privacy/persistence/make-persistence.sh" /usr/local/sbin/cyberdistro-make-persistence

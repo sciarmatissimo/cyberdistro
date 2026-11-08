@@ -36,6 +36,7 @@ from ..devices import TYPE_LABEL, guess_type, vendor
 from ..report import write as write_report
 from ..store import Store
 from ..templates import card
+from .. import agent as ag
 
 COLOURS = {"verde": "#1e8e3e", "giallo": "#d29b00", "rosso": "#c5221f", "grigio": "#80868b"}
 HEAD = {"verde": "Nessuna attività sospetta importante rilevata",
@@ -140,6 +141,8 @@ class Data:
         self.incidents: list[dict] = []
         self.devices: list[dict] = []
         self.actions: list[dict] = []
+        self.tasks: list[dict] = []
+        self.agent_logs: list[dict] = []
         self._store: Store | None = None
 
     def store(self) -> Store | None:
@@ -163,6 +166,8 @@ class Data:
                 self.incidents = st.incidents()
                 self.devices = st.devices()
                 self.actions = st.actions()
+                self.tasks = st.tasks()
+                self.agent_logs = st.agent_logs()
             except Exception:                      # noqa: BLE001 — database busy: keep last data
                 pass
 
@@ -300,7 +305,8 @@ class Main(QMainWindow):
         lay.addWidget(self.stack, 1)
         self.pages = {}
         for name, build in (("Home", self.page_home), ("Rete", self.page_network),
-                            ("Protezione", self.page_protection), ("Assistente AI", self.page_assistant),
+                            ("Protezione", self.page_protection), ("Attività AI", self.page_agent),
+                            ("Assistente AI", self.page_assistant),
                             ("Report", self.page_report), ("Privacy", self.page_privacy),
                             ("Impostazioni", self.page_settings)):
             w = QWidget()
@@ -397,7 +403,8 @@ class Main(QMainWindow):
         self.h_summary.setText(answer_question("La mia rete è sicura?", st, self.data.incidents, self.data.devices,
                                                actions=self.data.actions)
                                + ("\n" + answer_question("Ci sono dispositivi sconosciuti?", st,
-                                                          self.data.incidents, self.data.devices)))
+                                                          self.data.incidents, self.data.devices))
+                               + self._agent_note())
 
     # ---------------------------------------------------------------- Rete
     def page_network(self, v):
@@ -580,6 +587,279 @@ class Main(QMainWindow):
             desc = describe_device(d, self.data.incidents, self.data.actions) if d else ip
             h += f"<li>{e(desc)}" + (" — <i>trovato dalla tua scansione</i>" if i["facts"].get("found_by_scan") else "") + "</li>"
         self.inc_view.setHtml(h + "</ul>")
+
+    # ---------------------------------------------------------------- Attività AI (agent)
+    def page_agent(self, v):
+        v.addWidget(label("Attività AI", "h1"))
+        v.addWidget(label("Qui vedi cosa fa l'agente di Sentinel: cosa ha notato, cosa propone di fare per proteggere "
+                          "questo PC e cosa è già stato fatto. Con il livello «Chiede» nessuna azione parte senza il tuo "
+                          "«Approva». L'agente agisce solo su questo PC: non tocca il router né gli altri dispositivi.",
+                          "muted"))
+        f, l = cardframe()
+        row = QHBoxLayout()
+        row.addWidget(label("Livello di autonomia:", None, False))
+        self.ag_level = QComboBox()
+        self.ag_level.addItem("Chiede — prepara le azioni e aspetta il tuo «Approva»", "chiede")
+        self.ag_level.addItem("Osserva — solo consigli, nessuna azione", "osserva")
+        self.ag_level.activated.connect(self.agent_set_level)
+        row.addWidget(self.ag_level, 1)
+        self.ag_stop = QPushButton("Ferma l'agente")
+        self.ag_stop.setObjectName("danger")
+        self.ag_stop.clicked.connect(self.agent_toggle)
+        row.addWidget(self.ag_stop)
+        l.addLayout(row)
+        self.ag_own = QCheckBox("Questa è la mia rete: l'agente può proporre di esaminare (Nmap) i dispositivi nuovi")
+        self.ag_own.clicked.connect(self.agent_set_own)
+        l.addWidget(self.ag_own)
+        self.ag_state = label("", "muted")
+        l.addWidget(self.ag_state)
+        v.addWidget(f)
+        sp = QSplitter(Qt.Horizontal)
+        left = QWidget()
+        lv = QVBoxLayout(left)
+        lv.setContentsMargins(0, 0, 0, 0)
+        lv.addWidget(label("Da approvare e azioni attive", "h2"))
+        self.ag_list = QListWidget()
+        self.ag_list.setWordWrap(True)
+        self.ag_list.currentRowChanged.connect(self.agent_select)
+        lv.addWidget(self.ag_list, 1)
+        sp.addWidget(left)
+        right = QWidget()
+        rv = QVBoxLayout(right)
+        rv.setContentsMargins(0, 0, 0, 0)
+        self.ag_view = QTextBrowser()
+        rv.addWidget(self.ag_view, 1)
+        br = QHBoxLayout()
+        self.ag_ok = QPushButton("Approva")
+        self.ag_ok.setObjectName("primary")
+        self.ag_ok.clicked.connect(self.agent_approve)
+        self.ag_no = QPushButton("Rifiuta")
+        self.ag_no.clicked.connect(self.agent_reject)
+        self.ag_undo = QPushButton("Annulla l'azione")
+        self.ag_undo.clicked.connect(self.agent_undo)
+        self.ag_ai = QPushButton("Spiegamelo (AI)")
+        self.ag_ai.clicked.connect(self.agent_explain)
+        for b in (self.ag_ok, self.ag_no, self.ag_undo, self.ag_ai):
+            br.addWidget(b)
+        rv.addLayout(br)
+        sp.addWidget(right)
+        sp.setSizes([420, 640])
+        sp.setMinimumHeight(330)
+        v.addWidget(sp)
+        v.addWidget(label("Cronologia dell'agente", "h2"))
+        self.ag_log = QTextBrowser()
+        self.ag_log.setMinimumHeight(200)
+        v.addWidget(self.ag_log)
+        self._ag_rows: list[dict] = []
+        self._ag_sel: int | None = None
+
+    def update_agent(self):
+        st = self.data.store()
+        if not st:
+            return
+        level = st.meta("agent_level", ag.DEFAULT_LEVEL)
+        paused = st.meta("agent_paused", False)
+        hb = st.meta("agent_heartbeat", 0) or 0
+        self.ag_level.setCurrentIndex(0 if level == "chiede" else 1)
+        self.ag_stop.setText("Riattiva l'agente" if paused else "Ferma l'agente")
+        self.ag_stop.setObjectName("primary" if paused else "danger")
+        self.ag_stop.style().unpolish(self.ag_stop)
+        self.ag_stop.style().polish(self.ag_stop)
+        gw = next((d for d in self.data.devices if d.get("is_gateway")), None)
+        self.ag_own.setEnabled(bool(gw and gw.get("mac")))
+        self.ag_own.setChecked(bool(gw and gw.get("mac") and st.meta("own_network") == gw.get("mac")))
+        alive = time.time() - hb < 30
+        self.ag_state.setText(("L'agente è FERMO: non propone nulla finché non lo riattivi." if paused else
+                               "L'agente è attivo e osserva gli allarmi." if alive else
+                               "L'agente non risponde (servizio sentinel-agent non attivo).")
+                              + f" Ultimo controllo: {when(hb)}.")
+        rows = [t for t in self.data.tasks if t["status"] in (ag.PROPOSTA, ag.CONSIGLIO, ag.IN_CORSO, ag.ATTIVA)]
+        order = {ag.PROPOSTA: 0, ag.IN_CORSO: 1, ag.ATTIVA: 2, ag.CONSIGLIO: 3}
+        rows.sort(key=lambda t: (order[t["status"]], -t["ts"]))
+        n_pending = sum(1 for t in rows if t["status"] == ag.PROPOSTA)
+        item = self.nav.item(self.pages["Attività AI"])
+        item.setText("Attività AI" + (f"  ({n_pending})" if n_pending else ""))
+        keys = [(t["id"], t["status"]) for t in rows]
+        if keys != [(t["id"], t["status"]) for t in self._ag_rows]:
+            self._ag_rows = rows
+            self.ag_list.blockSignals(True)
+            self.ag_list.clear()
+            tag = {ag.PROPOSTA: "DA APPROVARE", ag.IN_CORSO: "IN CORSO", ag.ATTIVA: "ATTIVA", ag.CONSIGLIO: "CONSIGLIO"}
+            col = {ag.PROPOSTA: "#b06000", ag.IN_CORSO: "#1a73e8", ag.ATTIVA: "#188038", ag.CONSIGLIO: "#5f6368"}
+            sel_row = -1
+            for n, t in enumerate(rows):
+                extra = ""
+                if t["status"] == ag.ATTIVA and t.get("expires_ts"):
+                    extra = f" · scade tra {max(0, int((t['expires_ts'] - time.time()) // 3600))} h"
+                it = QListWidgetItem(f"{tag[t['status']]} · {ag.label(t)}\n{when(t['ts'])}{extra}")
+                it.setForeground(QColor(col[t["status"]]))
+                self.ag_list.addItem(it)
+                if t["id"] == self._ag_sel:
+                    sel_row = n
+            if not rows:
+                self.ag_list.addItem(QListWidgetItem("Nessuna proposta in attesa e nessuna azione attiva."))
+            self.ag_list.blockSignals(False)
+            if sel_row >= 0:
+                self.ag_list.setCurrentRow(sel_row)
+            self.agent_select(self.ag_list.currentRow())
+        e = html.escape
+        lines = []
+        for g in self.data.agent_logs[:120]:
+            lines.append(f"<p><b>{e(datetime.fromtimestamp(g['ts']).strftime('%d/%m %H:%M:%S'))}</b> — {e(g['text'])}</p>")
+        txt = "".join(lines) or "<p>Ancora nessuna attività.</p>"
+        if txt != getattr(self, "_ag_log_txt", None):
+            self._ag_log_txt = txt
+            self.ag_log.setHtml(txt)
+
+    def _agent_note(self) -> str:
+        n = sum(1 for t in self.data.tasks if t["status"] == ag.PROPOSTA)
+        return (f"\nL'agente ha {n} {'proposta' if n == 1 else 'proposte'} di protezione da approvare: "
+                "apri «Attività AI».") if n else ""
+
+    def _ag_task(self):
+        r = self.ag_list.currentRow()
+        return self._ag_rows[r] if 0 <= r < len(self._ag_rows) else None
+
+    def agent_select(self, _row=None):
+        t = self._ag_task()
+        self._ag_sel = t["id"] if t else None
+        for b in (self.ag_ok, self.ag_no, self.ag_undo, self.ag_ai):
+            b.setEnabled(False)
+        if not t:
+            self.ag_view.setHtml("<p>Seleziona una voce per vedere cosa propone l'agente e perché.</p>")
+            return
+        e = html.escape
+        inc = next((i for i in self.data.incidents if i["key"] == t["incident_key"]), None)
+        h = f"<h2>{e(ag.label(t))}</h2>"
+        h += f"<p><b>Perché:</b> {e(t['reason'] or '')}</p>"
+        h += f"<p><b>Cosa succede se approvi:</b> {e(ag.effect(t))}</p>"
+        if inc:
+            h += f"<p><b>Cosa consiglia la scheda dell'allarme:</b> {e(card(inc)['todo'])}</p>"
+        ctx = next((x for x in self.data.tasks if x["action"] == "context" and x["incident_key"] == t["incident_key"]
+                    and isinstance(x.get("result"), dict)), None)
+        if ctx:
+            h += f"<p><b>Contesto raccolto su {e(ctx['target'])}:</b> {e(ag.context_text(ctx['result']))}</p>"
+            if self.advanced and ctx["result"].get("dns_names"):
+                h += ("<p><b>Nomi cercati (dati arrivati dalla rete):</b> "
+                      + e(", ".join(ctx["result"]["dns_names"])) + "</p>")
+        if isinstance(t.get("result"), dict) and t["result"].get("output"):
+            h += f"<p><b>Esito:</b> {e(t['result']['output'])}</p>"
+        if t["status"] == ag.CONSIGLIO:
+            h += ("<p><i>Livello «Osserva»: è solo un consiglio. Per poterlo approvare da qui, scegli il livello "
+                  "«Chiede».</i></p>")
+        self.ag_view.setHtml(h)
+        self.ag_ok.setEnabled(t["status"] == ag.PROPOSTA)
+        self.ag_no.setEnabled(t["status"] in (ag.PROPOSTA, ag.CONSIGLIO))
+        self.ag_undo.setEnabled(t["status"] == ag.ATTIVA)
+        self.ag_ai.setEnabled(True)
+
+    def _ag_runner(self, cmd, timeout):
+        return run(cmd, timeout)
+
+    def agent_approve(self):
+        t = self._ag_task()
+        st = self.data.store()
+        if not t or not st or t["status"] != ag.PROPOSTA:
+            return
+        st.agent_log(f"Approvato dall'utente: {ag.lc(ag.label(t))}.", t["id"])
+        self.ag_ok.setEnabled(False)
+        self.say_status(f"In corso: {ag.lc(ag.label(t))}…")
+
+        def done(res):
+            nt = res if isinstance(res, dict) else None
+            if nt and nt["status"] in (ag.ATTIVA, ag.COMPLETATA):
+                msg = f"Fatto: {ag.lc(ag.label(nt))}."
+                r = nt.get("result") or {}
+                if nt["action"] == "examine" and isinstance(r, dict):
+                    msg += "\n\n" + r.get("summary", "")
+                if nt["action"] == "capture" and isinstance(r, dict):
+                    msg += "\n\nFile: " + r.get("file", "")
+                QMessageBox.information(self, "Attività AI", msg)
+            else:
+                QMessageBox.warning(self, "Attività AI", "L'azione non è riuscita: vedi la cronologia dell'agente.")
+            self.refresh()
+        self.pool.start(Job(lambda: ag.execute(Store(self.paths.db), t, self._ag_runner, ["pkexec"]), done))
+
+    def agent_reject(self):
+        t = self._ag_task()
+        st = self.data.store()
+        if t and st:
+            ag.reject(st, t)
+            self.refresh()
+
+    def agent_undo(self):
+        t = self._ag_task()
+        st = self.data.store()
+        if t and st and t["status"] == ag.ATTIVA:
+            ag.undo(st, t, self._ag_runner, ["pkexec"])
+            self.refresh()
+
+    def agent_set_level(self, _i=None):
+        st = self.data.store()
+        if st:
+            lv = self.ag_level.currentData()
+            st.set_meta("agent_level", lv, commit=True)
+            st.agent_log("Livello di autonomia impostato su «" + ("Chiede" if lv == "chiede" else "Osserva") + "».")
+            self.refresh()
+
+    def agent_set_own(self, on):
+        st = self.data.store()
+        gw = next((d for d in self.data.devices if d.get("is_gateway")), None)
+        if not st or not gw:
+            return
+        if on and not confirm(self, "La mia rete", "Confermi che questa rete è tua (o che hai il permesso di "
+                              "esaminarla)? Esaminare dispositivi di reti altrui può essere illegale."):
+            self.ag_own.setChecked(False)
+            return
+        st.set_meta("own_network", gw.get("mac") if on else None, commit=True)
+        st.agent_log("Rete dichiarata come tua: l'agente può proporre esami dei dispositivi nuovi." if on else
+                     "Rete non più dichiarata come tua: niente proposte di esame.")
+        self.refresh()
+
+    def agent_toggle(self):
+        st = self.data.store()
+        if not st:
+            return
+        if st.meta("agent_paused", False):
+            st.set_meta("agent_paused", False, commit=True)
+            st.agent_log("Agente riattivato dall'utente.")
+            self.refresh()
+            return
+        if not confirm(self, "Ferma l'agente", "Fermare l'agente? Le proposte in attesa vengono rifiutate e le "
+                       "azioni attive (blocchi, router fissato) vengono annullate."):
+            return
+        st.set_meta("agent_paused", True, commit=True)
+        for t in self.data.tasks:
+            if t["status"] in (ag.PROPOSTA, ag.CONSIGLIO):
+                ag.reject(st, t, "agente fermato")
+            elif t["status"] == ag.ATTIVA:
+                ag.undo(st, t, self._ag_runner, ["pkexec"])
+        st.agent_log("Agente fermato dall'utente: proposte rifiutate, azioni annullate.")
+        self.refresh()
+
+    def agent_explain(self):
+        t = self._ag_task()
+        if not t:
+            return
+        inc = next((i for i in self.data.incidents if i["key"] == t["incident_key"]), None)
+        facts = ag.task_facts(t, inc)
+        ok, why = self.llm.availability()
+        if not ok:
+            QMessageBox.information(self, "Spiegazione", "Il modello AI non è disponibile (" + why + ").\n\n"
+                                    + ag.effect(t))
+            return
+        self.ag_ai.setEnabled(False)
+        self.say_status("Il modello AI sta preparando la spiegazione (20–60 secondi)…")
+
+        def done(res):
+            self.ag_ai.setEnabled(True)
+            if isinstance(res, Exception) or not res or not res[0] or res[1]:
+                QMessageBox.information(self, "Spiegazione", "Non ho una spiegazione verificata del modello. "
+                                        + (t["reason"] or "") + "\n\n" + ag.effect(t))
+                return
+            QMessageBox.information(self, "Spiegazione (AI locale, verificata)", res[0])
+        q = "Spiega in parole semplici a una persona non esperta perché questa azione è utile e cosa cambia."
+        self.pool.start(Job(lambda: answer_free(q, facts, self.llm), done))
 
     def ai_explain(self):
         if not self.selected_inc:
@@ -1024,8 +1304,8 @@ class Main(QMainWindow):
     # ---------------------------------------------------------------- refresh
     def refresh(self):
         self.data.refresh()
-        for fn in (self.update_home, self.update_network, self.update_protection, self.update_report,
-                   self.update_settings):
+        for fn in (self.update_home, self.update_network, self.update_protection, self.update_agent,
+                   self.update_report, self.update_settings):
             try:
                 fn()
             except Exception as e:                 # noqa: BLE001 — never crash the kiosk

@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS actions (
   result TEXT, undone_ts REAL
 );
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS agent_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, incident_key TEXT, action TEXT, target TEXT,
+  params TEXT, status TEXT, reason TEXT, result TEXT, expires_ts REAL, updated_ts REAL
+);
+CREATE TABLE IF NOT EXISTS agent_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, text TEXT, task_id INTEGER
+);
 """
 
 
@@ -100,8 +107,52 @@ class Store:
         self.db.execute("UPDATE actions SET undone_ts=? WHERE id=?", (time.time(), action_id))
         self.db.commit()
 
-    def set_meta(self, k: str, v) -> None:
+    def set_meta(self, k: str, v, commit: bool = False) -> None:
         self.db.execute("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", (k, json.dumps(v)))
+        if commit:
+            self.db.commit()
+
+    # ---------------------------------------------------------- agent (0.3)
+    def add_task(self, incident_key, action, target, params, status, reason, result=None) -> int:
+        now = time.time()
+        cur = self.db.execute(
+            "INSERT INTO agent_tasks(ts,incident_key,action,target,params,status,reason,result,updated_ts) "
+            "VALUES(?,?,?,?,?,?,?,?,?)",
+            (now, incident_key, action, target, json.dumps(params or {}), status, reason,
+             json.dumps(result) if result is not None else None, now))
+        self.db.commit()
+        return cur.lastrowid
+
+    def update_task(self, task_id: int, **fields) -> None:
+        if "result" in fields and fields["result"] is not None and not isinstance(fields["result"], str):
+            fields["result"] = json.dumps(fields["result"])
+        fields["updated_ts"] = time.time()
+        cols = ", ".join(f"{k}=?" for k in fields)
+        self.db.execute(f"UPDATE agent_tasks SET {cols} WHERE id=?", (*fields.values(), task_id))
+        self.db.commit()
+
+    def tasks(self, limit: int = 300) -> list[dict]:
+        out = []
+        for r in self.db.execute("SELECT * FROM agent_tasks ORDER BY id DESC LIMIT ?", (limit,)).fetchall():
+            d = dict(r)
+            d["params"] = json.loads(d["params"] or "{}")
+            try:
+                d["result"] = json.loads(d["result"]) if d["result"] else None
+            except ValueError:
+                pass
+            out.append(d)
+        return out
+
+    def task(self, task_id: int) -> dict | None:
+        return next((t for t in self.tasks(1000) if t["id"] == task_id), None)
+
+    def agent_log(self, text: str, task_id: int | None = None) -> None:
+        self.db.execute("INSERT INTO agent_log(ts,text,task_id) VALUES(?,?,?)", (time.time(), text, task_id))
+        self.db.commit()
+
+    def agent_logs(self, limit: int = 200) -> list[dict]:
+        return [dict(r) for r in self.db.execute("SELECT * FROM agent_log ORDER BY id DESC LIMIT ?",
+                                                 (limit,)).fetchall()]
 
     def commit(self) -> None:
         self.db.commit()

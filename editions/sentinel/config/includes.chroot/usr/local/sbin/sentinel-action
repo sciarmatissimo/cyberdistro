@@ -6,7 +6,14 @@
 #   sentinel-action block <ip> [hours]   block traffic to/from <ip> on this PC
 #   sentinel-action unblock <ip>         undo
 #   sentinel-action list                 show active blocks
-set -euo pipefail
+#   sentinel-action pin-gateway <ip> <mac>   fix the router's real hardware address
+#                                        (defeats ARP spoofing of the router on THIS PC)
+#   sentinel-action unpin-gateway <ip>   undo
+#   sentinel-action capture <ip> [sec]   save up to 60 s of this PC's traffic with <ip>
+#                                        to /var/lib/sentinel/evidence (pcap)
+#
+# Never acts against this PC, the router (except pinning its real address) or the
+# DNS servers in use.set -euo pipefail
 
 TABLE="inet sentinel"
 
@@ -36,6 +43,8 @@ case "${1:-}" in
         [[ "$hours" =~ ^[0-9]+$ ]] && [ "$hours" -ge 1 ] && [ "$hours" -le 168 ] || { echo "Durata non valida" >&2; exit 2; }
         gw="$(ip route show default | awk '/^default/{print $3; exit}')"
         [ "$ip" = "$gw" ] && { echo "Rifiutato: $ip è il router; bloccarlo interromperebbe la connessione." >&2; exit 3; }
+        ip -4 -o addr show | awk '{print $4}' | cut -d/ -f1 | grep -qx "$ip" && { echo "Rifiutato: $ip è questo PC." >&2; exit 3; }
+        awk '/^nameserver/{print $2}' /etc/resolv.conf | grep -qx "$ip" && { echo "Rifiutato: $ip è il server DNS in uso." >&2; exit 3; }
         ensure_table
         nft add element $TABLE blocked4 "{ $ip timeout ${hours}h }"
         echo "Bloccato $ip su questo PC per ${hours} ore."
@@ -48,6 +57,36 @@ case "${1:-}" in
     list)
         nft list set $TABLE blocked4 2>/dev/null || echo "Nessun blocco attivo."
         ;;
+    pin-gateway)
+        ip="${2:?indirizzo mancante}"; mac="${3:?scheda di rete mancante}"
+        valid_ip "$ip" || { echo "Indirizzo non valido: $ip" >&2; exit 2; }
+        [[ "$mac" =~ ^[0-9a-f]{2}(:[0-9a-f]{2}){5}$ ]] || { echo "Scheda di rete non valida: $mac" >&2; exit 2; }
+        gw="$(ip route show default | awk '/^default/{print $3; exit}')"
+        [ "$ip" = "$gw" ] || { echo "Rifiutato: $ip non è il router di questa rete." >&2; exit 3; }
+        dev="$(ip route show default | awk '/^default/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+        ip neigh replace "$ip" lladdr "$mac" nud permanent dev "$dev"
+        echo "Router $ip fissato sulla scheda $mac (interfaccia $dev) fino al riavvio."
+        ;;
+    unpin-gateway)
+        ip="${2:?indirizzo mancante}"
+        valid_ip "$ip" || { echo "Indirizzo non valido: $ip" >&2; exit 2; }
+        dev="$(ip route show default | awk '/^default/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+        ip neigh del "$ip" dev "$dev" 2>/dev/null || true
+        echo "Indirizzo del router $ip di nuovo appreso normalmente."
+        ;;
+    capture)
+        ip="${2:?indirizzo mancante}"; sec="${3:-60}"
+        valid_ip "$ip" || { echo "Indirizzo non valido: $ip" >&2; exit 2; }
+        [[ "$sec" =~ ^[0-9]+$ ]] && [ "$sec" -ge 5 ] && [ "$sec" -le 60 ] || { echo "Durata non valida" >&2; exit 2; }
+        dir=/var/lib/sentinel/evidence
+        install -d -m 2770 -o sentinel -g sentinel "$dir"
+        f="$dir/$(date +%Y%m%d-%H%M%S)-${ip}.pcap"
+        timeout "$sec" tcpdump -n -i any -c 20000 -w "$f" "host $ip" >/dev/null 2>&1 || true
+        [ -f "$f" ] || { echo "Cattura non riuscita" >&2; exit 1; }
+        chown sentinel:sentinel "$f"; chmod 0640 "$f"
+        echo "Prova salvata ($(stat -c%s "$f") byte):"
+        echo "$f"
+        ;;
     *)
-        echo "Uso: $0 block <ip> [ore] | unblock <ip> | list" >&2; exit 2 ;;
+        echo "Uso: $0 block <ip> [ore] | unblock <ip> | list | pin-gateway <ip> <mac> | unpin-gateway <ip> | capture <ip> [sec]" >&2; exit 2 ;;
 esac

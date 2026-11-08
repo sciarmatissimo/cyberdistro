@@ -4,7 +4,7 @@
 set -e
 systemctl disable suricata.service 2>/dev/null || true
 systemctl mask suricata.service 2>/dev/null || true
-for u in sentinel-engines.service sentinel-sensor.service sentinel-core.service sentinel-logcap.timer greetd.service; do
+for u in sentinel-engines.service sentinel-sensor.service sentinel-core.service sentinel-agent.service sentinel-logcap.timer greetd.service; do
     systemctl enable "$u"
 done
 mkdir -p /var/lib/sentinel /var/log/suricata /var/log/zeek/current
