@@ -27,6 +27,24 @@ Build: `./build.sh --flavour kiosk` (predefinito) oppure `./build.sh --flavour l
 Lite è il profilo comune più la cartella `editions/sentinel/flavours/lite/` (pacchetti del desktop,
 configurazione di LXQt, accesso automatico con `startx`).
 
+### Sentinel Lite 0.4.0-alpha — l'intera rete
+
+Aggiunge gli strumenti **2a/2b/2c** per vedere e controllare l'intera rete (censimento, ispezione a
+tempo, controllo Wi-Fi/DNS) e il livello di autonomia **«Protezione automatica»** (vedi
+«Vedere e controllare l'intera rete (0.4)»). La build è stata verificata in macchina virtuale, avviata
+da chiavetta USB fino al desktop, provando a mano tutti e tre gli strumenti con un attacco reale:
+censimento della /24 (richieste ARP a tutti gli indirizzi), protezione automatica che fissa il router
+al suo vero indirizzo hardware, ispezione del traffico avviata e poi fermata con la rete ripristinata
+(inoltro IP tornato a zero), e controllo Wi-Fi/DNS che segnala il DNS sano. 78 test automatici
+superati. La ISO scaricabile è costruita da GitHub Actions nella release
+[`sentinel-lite-v0.4.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.4.0-alpha);
+dimensione e SHA-256 della ISO pubblicata vengono aggiunti dopo il download e la verifica del checksum.
+Dettagli e prove: [`release/sentinel-lite-verification-0.4.0-alpha.md`](../../release/sentinel-lite-verification-0.4.0-alpha.md).
+
+| Attività AI (la mia rete) | Ispezione: consenso | Protezione automatica |
+| --- | --- | --- |
+| ![Attività AI](screenshots/lite04-attivita-ai.png) | ![Consenso](screenshots/lite04-ispezione-consenso.png) | ![Auto](screenshots/lite04-protezione-automatica.png) |
+
 ### Sentinel Lite 0.3.0-alpha — l'agente
 
 Pubblicata nella release [`sentinel-lite-v0.3.0-alpha`](https://github.com/sciarmatissimo/cyberdistro/releases/tag/sentinel-lite-v0.3.0-alpha)
@@ -105,7 +123,9 @@ proposta (pulsante «Spiegamelo (AI)», con il verificatore).
 | Dispositivo nuovo | esame Nmap, **solo** se hai dichiarato «questa è la mia rete» |
 | Ogni allarme di gravità media o alta | raccolta automatica del contesto dai log di Zeek (connessioni, porte, ricerche DNS): è passiva |
 
-- **Livelli**: «Chiede» (predefinito: nessuna azione senza «Approva») e «Osserva» (solo consigli).
+- **Livelli**: «Chiede» (predefinito: nessuna azione senza «Approva»), «Osserva» (solo consigli) e,
+  dalla 0.4, «Protezione automatica» (esegue da sola le azioni locali e reversibili; esami e ispezioni
+  restano da approvare).
 - **Regole fisse**: mai contro questo PC, il router o i server DNS (controllato anche da
   `sentinel-action`); il router e gli indirizzi locali sono letti dal kernel; blocchi con scadenza;
   ogni azione si annulla; al massimo 12 proposte l'ora; un rifiuto vale 24 ore.
@@ -113,6 +133,50 @@ proposta (pulsante «Spiegamelo (AI)», con il verificatore).
 - Le azioni approvate passano da `pkexec sentinel-action` (`block`, `unblock`, `pin-gateway`,
   `unpin-gateway`, `capture`); le prove vanno in `/var/lib/sentinel/evidence`.
 - Non tocca il router né gli altri dispositivi: protegge **questo PC**.
+
+## Vedere e controllare l'intera rete (0.4)
+
+Fino alla 0.3 Sentinel vedeva solo il traffico che arrivava a questo PC. La 0.4 aggiunge tre strumenti
+**facoltativi** e pensati per chi non è esperto, tutti nella scheda «Attività AI». Restano spenti finché
+non li accendi tu, e gli strumenti che guardano l'intera rete chiedono prima di confermare che la rete
+è tua.
+
+- **Mappa completa della rete (2a — censimento).** Con «Questa è la mia rete» e «Mappa completa»
+  attivi, il sensore manda ogni pochi minuti una richiesta ARP a ogni indirizzo della tua sottorete
+  e annota chi risponde: così l'agente trova anche i dispositivi che non parlano mai con questo PC
+  (telecamere, stampanti, domotica) e può proporre di esaminarli con Nmap. Il censimento usa la
+  stessa presa di rete già usata dal sensore passivo (un solo servizio con privilegi di rete);
+  l'agente e l'interfaccia restano senza privilegi. Niente scansione di reti enormi: se la maschera
+  è troppo ampia il censimento si rifiuta.
+
+- **Ispeziona il traffico della rete (2b — ispezione a tempo).** Per il numero di minuti che scegli
+  (1–10), questo PC fa passare da sé il traffico degli altri dispositivi **continuando a inoltrarlo**
+  (la rete non si interrompe), così Suricata e Zeek vedono *chi parla con chi*, quanto e quali siti
+  vengono cercati — il contenuto cifrato (HTTPS) resta illeggibile. Prima di partire una finestra
+  spiega cosa fa, ricorda che va usata **solo sulla propria rete e con il consenso di chi la usa**
+  (in Italia artt. 617 e seguenti del codice penale) e richiede una spunta di conferma. L'ispezione
+  si **ferma da sola** allo scadere del tempo e rimette a posto la rete; un triplo fermo di sicurezza
+  (limite di tempo, orologio interno, segnale di arresto) e la guarigione delle cache ARP sono
+  garantiti dal programma `sentinel-inspect`, che non tocca mai questo PC, il router o i server DNS
+  e lavora solo su sottoreti private. Al termine mostra un riepilogo per dispositivo.
+
+- **Controlla questa rete — Wi-Fi e DNS (2c).** Un controllo immediato che segnala una rete Wi-Fi
+  aperta o con cifratura debole (WEP/WPA1), la presenza di due reti con lo stesso nome ma sicurezza
+  diversa (possibile «rete gemella»/evil-twin) e un DNS che risponde con un indirizzo a un nome
+  inesistente (possibile dirottamento). Tutto in parole semplici, con livello OK/Attenzione/Pericolo.
+
+- **Protezione automatica (livello di autonomia «auto»).** Oltre a «Chiede» (predefinito) e «Osserva»,
+  l'agente può eseguire **da solo** le azioni di difesa locali e reversibili — blocco di un indirizzo
+  su questo PC, raccolta di una prova, router fissato — mentre esami e ispezioni restano sempre da
+  approvare. L'esecuzione automatica avviene nella sessione dell'utente tramite `pkexec` (azione
+  polkit dedicata, solo per percorsi fissi): il servizio di sistema dell'agente **non** riceve mai
+  sudo senza password.
+
+Queste funzioni guardano o agiscono sull'intera rete **solo quando sei tu a chiederlo**; le azioni di
+difesa continuano a toccare soltanto questo PC. Provate in macchina virtuale con attacchi reali:
+censimento della /24, protezione automatica che fissa il router, ispezione avviata e fermata con la
+rete ripristinata, controllo Wi-Fi/DNS. Dettagli:
+[`release/sentinel-lite-verification-0.4.0-alpha.md`](../../release/sentinel-lite-verification-0.4.0-alpha.md).
 
 ## L'assistente (0.2)
 
@@ -179,8 +243,10 @@ rete o un motore non è attivo.
 
 ## Limiti noti (alpha)
 
-- Vede solo il traffico che arriva a questo PC: su una rete commutata non vede il traffico tra altri
-  dispositivi (servirebbe un port mirror).
+- A riposo vede solo il traffico che arriva a questo PC: su una rete commutata non vede il traffico
+  tra altri dispositivi. Dalla 0.4, sulla **tua** rete e con il tuo consenso, puoi accendere il
+  censimento (per elencare tutti i dispositivi) e l'ispezione a tempo (per vedere *chi parla con chi*);
+  restano spenti per impostazione predefinita.
 - Il traffico cifrato si analizza solo nei metadati.
 - Le soglie sono state tarate solo su traffico sintetico: vanno verificate su reti reali (falsi positivi).
 - L'assistente su 2 core impiega 20–60 secondi per risposta e richiede almeno 2,6 GB di RAM libera
