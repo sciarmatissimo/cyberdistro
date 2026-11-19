@@ -242,6 +242,43 @@ shot("17-monitor-step4-traffico")
 mon.teardown()
 assert not mon._bridge_up
 
+# 3d) AI assistant (stub the backend so no real HTTP/model is needed) + the
+#     keyboard selector (stub setxkbmap). Exercise both end to end.
+from cyberdistro_sc.tools import assistant as _AI  # noqa: E402
+from cyberdistro_sc.tools import keyboard as _KB  # noqa: E402
+
+_AI.answer = lambda q, context="", **kw: (f"[stub] risposta a: {q}", False)
+_KB.apply_layout = lambda code, run=None, persist=True: _applied.setdefault("kbd", code)
+_applied = {}
+_KB.apply_layout = lambda code, run=None, persist=True: _applied.__setitem__("kbd", code)
+
+asst = win.pages["assistant"]
+win.go("assistant")
+box = asst.findChild(QtWidgets.QTextBrowser)
+# find the AssistantBox input and ask
+line = asst.findChild(QtWidgets.QLineEdit)
+line.setText("cos'è il bridge trasparente?")
+# trigger ask via the box
+for w in asst.findChildren(QtWidgets.QPushButton):
+    if w.text() in ("Chiedi", "Ask"):
+        w.click(); break
+for _ in range(40):
+    wait(50)
+    if "stub" in box.toPlainText() or "risposta" in box.toPlainText():
+        break
+print("[assistant] answer:", box.toPlainText()[:40])
+assert "bridge" in box.toPlainText().lower() or "stub" in box.toPlainText().lower()
+shot("18-assistente")
+
+# keyboard selector: changing it applies a layout (stubbed)
+assert win.kbd_combo.count() > 5
+# pick a different layout than current
+for i in range(win.kbd_combo.count()):
+    if win.kbd_combo.itemData(i) == "de":
+        win.kbd_combo.setCurrentIndex(i); break
+print("[keyboard] applied:", _applied.get("kbd"))
+assert _applied.get("kbd") == "de"
+
 # 4) Privacy + Learn pages.
 win.go("privacy"); shot("06-privacy")
 win.go("learn"); shot("07-impara")

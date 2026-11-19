@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=CyberDistro keyboard layout
+Comment=Re-apply the chosen keyboard layout at login
+Exec=/usr/local/bin/cyberdistro-keyboard apply
+Terminal=false
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=1
+NoDisplay=true

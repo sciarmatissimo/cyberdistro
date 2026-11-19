@@ -53,3 +53,6 @@ kwin-x11
 # --- Bluetooth (stack + Plasma applet/pairing UI; used by Security Center "Esplora") ---
 bluez
 bluedevil
+
+# keyboard layout switching (setxkbmap) for the user-chosen layout
+x11-xkb-utils

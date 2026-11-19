@@ -3,11 +3,11 @@
   "specVersion": "1.5",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-11-19T20:39:26.373455+00:00",
+    "timestamp": "2026-11-19T21:39:38.060444+00:00",
     "component": {
       "type": "operating-system",
       "name": "CyberDistro",
-      "version": "0.4.0-alpha"
+      "version": "0.5.0-alpha"
     },
     "tools": [
       {
@@ -21,7 +21,7 @@
     {
       "type": "application",
       "name": "cyberdistro-security-center",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "group": "cyberdistro",
       "purl": "pkg:deb/debian/cyberdistro-security-center",
       "licenses": [
@@ -347,6 +347,13 @@
       "version": "resolved-at-build",
       "group": "os-packages/system",
       "purl": "pkg:deb/debian/bluedevil"
+    },
+    {
+      "type": "library",
+      "name": "x11-xkb-utils",
+      "version": "resolved-at-build",
+      "group": "os-packages/system",
+      "purl": "pkg:deb/debian/x11-xkb-utils"
     },
     {
       "type": "library",

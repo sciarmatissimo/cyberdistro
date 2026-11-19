@@ -1,5 +1,30 @@
 # 03 — Stato puntuale e limitazioni note
 
+## Novità 0.5.0-alpha (2026-11-19)
+- **Scelta del layout di tastiera, indipendente dalla lingua**: selettore nella
+  barra laterale del Security Center (sotto «Modalità») con ~24 layout; applica
+  subito con `setxkbmap` e ricorda la scelta (`~/.config/cyberdistro/keyboard`,
+  riapplicata al login dall'autostart `cyberdistro-keyboard`). La lingua (it/en)
+  imposta solo un layout di *default*, che l'utente può cambiare liberamente.
+  Core `tools/keyboard.py` (parser testati), helper `/usr/local/bin/cyberdistro-keyboard`,
+  pacchetto `x11-xkb-utils`.
+- **Assistente AI (locale)**: nuova pagina «Assistente AI» (visibile anche in
+  Principiante) e un box «Chiedi all'AI cosa stai vedendo» dentro il Monitor di
+  rete, con il contesto del traffico osservato. L'utente fa domande libere; se è
+  avviato un modello locale (llama.cpp con API OpenAI, o Ollama — rilevati su
+  127.0.0.1) risponde il modello, altrimenti una base di conoscenza integrata
+  (bridge, HTTPS, dispositivi, siti, Tor, autorizzazioni). **Solo locale**:
+  nessun dato esce dal PC, nessun account. Core `tools/assistant.py` (FAQ pure +
+  plumbing HTTP iniettabile). La PC Edition resta leggera: il modello non è
+  incluso (lo è nell'edizione Sentinel) ma è usabile se avviato.
+- **Verifica**: test unitari (keyboard + assistant) ~66 totali; smoke test GUI
+  offscreen in IT ed EN che esercita assistente (backend simulato) e cambio
+  tastiera (setxkbmap simulato), con screenshot.
+- **CI**: corretto lo step Sentinel che faceva `bash -n` su `sentinel-inspect`
+  (script Python): ora il lint è shebang-aware (bash -n per shell, py_compile per
+  Python).
+
+
 ## Novità 0.4.0-alpha (2026-11-19)
 - **Monitor di rete (bridge trasparente)**: nuova modalità guidata nel Security
   Center (voce nel menu a sinistra, visibile anche in Principiante). Wizard a 4

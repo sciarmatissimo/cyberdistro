@@ -55,8 +55,19 @@ jobs:
           cd sentinel
           PYTHONPATH=src python3 -m unittest discover -s tests -v
           QT_QPA_PLATFORM=offscreen PYTHONPATH=src python3 tests/gui_smoke.py /tmp/sentinel-shots
+          # Syntax-check each file with the right tool: shell scripts with
+          # bash -n, Python scripts with py_compile (some helpers like
+          # sentinel-inspect are Python despite living in .../sbin/).
           for f in ../editions/sentinel/build.sh ../editions/sentinel/config/hooks/live/* \
-                   ../editions/sentinel/config/includes.chroot/usr/local/sbin/*; do bash -n "$f"; done
+                   ../editions/sentinel/config/includes.chroot/usr/local/sbin/*; do
+            [ -f "$f" ] || continue
+            shebang="$(head -1 "$f")"
+            case "$shebang" in
+              *python*) python3 -m py_compile "$f" ;;
+              *bash*|*/sh) bash -n "$f" ;;
+              *) case "$f" in *.py) python3 -m py_compile "$f" ;; *) bash -n "$f" ;; esac ;;
+            esac
+          done
 
       - name: Fix result ownership for upload
         if: always()

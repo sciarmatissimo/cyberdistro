@@ -1,0 +1,31 @@
+#!/bin/sh
+# Apply the user's chosen keyboard layout (independent of the UI language).
+# Called at login by the autostart entry, and by the Security Center.
+#   cyberdistro-keyboard apply        # apply the saved choice (or the default)
+#   cyberdistro-keyboard set <code>   # set + persist a layout now
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}/cyberdistro/keyboard"
+
+default_layout() {
+    # Build-time default from /etc/default/keyboard, else us.
+    if [ -r /etc/default/keyboard ]; then
+        v="$(sed -n 's/^XKBLAYOUT="\{0,1\}\([a-z,]*\).*/\1/p' /etc/default/keyboard | head -1)"
+        [ -n "$v" ] && { echo "${v%%,*}"; return; }
+    fi
+    echo us
+}
+
+case "${1:-apply}" in
+    set)
+        code="$2"
+        case "$code" in [a-z][a-z]*) : ;; *) echo "invalid layout: $code" >&2; exit 2 ;; esac
+        mkdir -p "$(dirname "$CFG")"
+        printf '%s\n' "$code" > "$CFG"
+        setxkbmap "$code" 2>/dev/null || true
+        ;;
+    apply)
+        if [ -r "$CFG" ]; then code="$(tr -d '[:space:]' < "$CFG")"; else code=""; fi
+        [ -n "$code" ] || code="$(default_layout)"
+        setxkbmap "$code" 2>/dev/null || true
+        ;;
+    *) echo "Uso: $0 apply | set <code>"; exit 2 ;;
+esac

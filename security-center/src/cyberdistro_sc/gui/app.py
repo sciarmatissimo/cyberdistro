@@ -39,6 +39,8 @@ from ..tools import explore as ex
 from ..tools import privacy_status as ps
 from ..tools import appstore as appstore
 from ..tools import netmonitor as netmon
+from ..tools import keyboard as kbd
+from ..tools import assistant as ai
 from .. import __version__
 
 
@@ -158,6 +160,74 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
         lbl.setStyleSheet("padding: 6px 12px; border-radius: 12px; border: 1px solid palette(midlight);"
                           f" color: {'#30d158' if good else 'palette(mid)'};")
         return lbl
+
+    # ----------------------------------------------------- AI assistant box
+    class AssistantBox(QtWidgets.QWidget):
+        """Reusable 'ask the AI' widget. context_getter() returns extra context
+        (e.g. the current network-monitor summary) passed to the assistant."""
+
+        def __init__(self, win, context_getter=lambda: "", compact=False):
+            super().__init__()
+            self.win = win
+            self.context_getter = context_getter
+            self._worker = None
+            lay = QtWidgets.QVBoxLayout(self)
+            lay.setContentsMargins(0, 0, 0, 0)
+            if not compact:
+                lay.addWidget(muted(L(
+                    "Chiedi all'assistente: funziona tutto in locale (nessun dato esce dal "
+                    "PC). Con un modello AI locale avviato risponde a domande libere; "
+                    "altrimenti dà spiegazioni di base.",
+                    "Ask the assistant: everything runs locally (no data leaves the PC). "
+                    "With a local AI model running it answers free-form questions; "
+                    "otherwise it gives basic explanations.")))
+            row = QtWidgets.QHBoxLayout()
+            self.inp = QtWidgets.QLineEdit()
+            self.inp.setPlaceholderText(L("Scrivi una domanda… es. «cosa vedo con il bridge?»",
+                                          "Type a question… e.g. “what do I see with the bridge?”"))
+            self.inp.returnPressed.connect(self.ask)
+            self.btn = QtWidgets.QPushButton(L("Chiedi", "Ask"))
+            self.btn.setMinimumWidth(110)
+            self.btn.clicked.connect(self.ask)
+            row.addWidget(self.inp, 1)
+            row.addWidget(self.btn)
+            lay.addLayout(row)
+            self.out = QtWidgets.QTextBrowser()
+            self.out.setMinimumHeight(90 if compact else 200)
+            lay.addWidget(self.out, 1)
+
+        def ask(self):
+            q = self.inp.text().strip()
+            if not q or self._worker is not None:
+                return
+            self.btn.setEnabled(False)
+            self.out.setPlainText(L("Sto pensando…", "Thinking…"))
+            ctx = ""
+            try:
+                ctx = self.context_getter() or ""
+            except Exception:
+                ctx = ""
+            self._worker = Worker(ai.answer, q, ctx)
+            self._worker.done.connect(self._done)
+            self._worker.failed.connect(self._fail)
+            self._worker.finished.connect(self._cleanup)
+            self._worker.start()
+
+        def _done(self, result):
+            text, used_model = result
+            tag = (L("🤖 Modello AI locale", "🤖 Local AI model") if used_model
+                   else L("💡 Assistente (modalità base)", "💡 Assistant (basic mode)"))
+            safe = html.escape(text).replace("\n", "<br>")
+            self.out.setHtml(f"<p style='color:gray'>{tag}</p><p>{safe}</p>")
+            self.win.log_operation("assistant.ask", 0)
+            self.btn.setEnabled(True)
+
+        def _fail(self, msg):
+            self.out.setPlainText(msg)
+            self.btn.setEnabled(True)
+
+        def _cleanup(self):
+            self._worker = None
 
     # ------------------------------------------------------- worker thread
     class Worker(QtCore.QThread):
@@ -595,6 +665,9 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             sv.addWidget(self.site_list, 1)
             split.addLayout(dv, 3); split.addLayout(sv, 2)
             l3.addLayout(split, 1)
+            l3.addWidget(QtWidgets.QLabel("<b>" + L("Chiedi all'AI cosa stai vedendo",
+                                                    "Ask the AI what you are seeing") + "</b>"))
+            l3.addWidget(AssistantBox(self.win, context_getter=self._ai_context, compact=True))
             self.stack.addWidget(s3)
 
             # live refresh timer (reads QProcess output buffer)
@@ -744,6 +817,21 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
                 except Exception:
                     pass
             self._refresh_visual()
+
+        def _ai_context(self):
+            devs = self.summary.top_devices(8)
+            sites = self.summary.top_sites(12)
+            if not devs and not sites:
+                return ""
+            lines = []
+            if devs:
+                lines.append(L("Dispositivi:", "Devices:"))
+                for d in devs:
+                    lines.append(f"  - {d.ip or d.mac}: {d.packets} pkt, "
+                                 + ", ".join(sorted(d.sites)[:5]))
+            if sites:
+                lines.append(L("Siti:", "Sites:") + " " + ", ".join(s.name for s in sites))
+            return "\n".join(lines)
 
         def _feed_summary_text(self, text):
             self.summary.feed(text)
@@ -1052,6 +1140,25 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             browser.setHtml("".join(parts))
             lay.addWidget(browser, 1)
 
+    class AssistantPage(QtWidgets.QWidget):
+        def __init__(self, win):
+            super().__init__()
+            lay = QtWidgets.QVBoxLayout(self)
+            lay.setContentsMargins(28, 24, 28, 24)
+            lay.addWidget(h1(L("Assistente AI", "AI assistant")))
+            lay.addWidget(muted(L(
+                "Fai una domanda sulla sicurezza, sul Monitor di rete, sulla privacy o su "
+                "come usare CyberDistro. Tutto resta sul tuo computer: nessun account, "
+                "nessun dato inviato online.",
+                "Ask a question about security, the Network Monitor, privacy or how to use "
+                "CyberDistro. Everything stays on your computer: no account, no data sent "
+                "online.")))
+            ok, _, _ = ai.available()
+            lay.addWidget(chip(L("Modello AI locale attivo", "Local AI model active") if ok
+                               else L("Nessun modello locale: risposte di base",
+                                      "No local model: basic answers"), ok))
+            lay.addWidget(AssistantBox(win), 1)
+
     class CliBackedPage(QtWidgets.QWidget):
         def __init__(self, title, cmd_hint):
             super().__init__()
@@ -1193,8 +1300,9 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
     # ---------------------------------------------------------- main window
     PAGE_DEFS = [  # key, beginner-visible
         ("explore", True), ("dashboard", True), ("monitor", True),
-        ("forensics", True), ("reversing", True), ("catalog", False),
-        ("privacy", True), ("projects", False), ("reports", False), ("learn", True),
+        ("forensics", True), ("reversing", True), ("assistant", True),
+        ("catalog", False), ("privacy", True), ("projects", False),
+        ("reports", False), ("learn", True),
     ]
 
     def page_label(key):
@@ -1204,6 +1312,7 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             "monitor": L("Monitor di rete", "Network monitor"),
             "forensics": _t("nav.forensics"),
             "reversing": _t("nav.reversing"),
+            "assistant": L("Assistente AI", "AI assistant"),
             "catalog": L("Strumenti", "Tools"),
             "privacy": "Privacy",
             "projects": L("Progetti", "Projects"),
@@ -1245,6 +1354,20 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             self.mode_combo.setCurrentIndex(list(Mode).index(self.mode))
             self.mode_combo.currentIndexChanged.connect(self._mode_changed)
             sl.addWidget(self.mode_combo)
+
+            # Keyboard layout — independent of the UI language; applies at runtime.
+            sl.addSpacing(6)
+            sl.addWidget(QtWidgets.QLabel(L("Tastiera", "Keyboard")))
+            self.kbd_combo = QtWidgets.QComboBox()
+            for code, label in kbd.layouts():
+                self.kbd_combo.addItem(f"{label} ({code})", code)
+            cur = kbd.current_layout()
+            for i in range(self.kbd_combo.count()):
+                if self.kbd_combo.itemData(i) == cur:
+                    self.kbd_combo.setCurrentIndex(i)
+                    break
+            self.kbd_combo.currentIndexChanged.connect(self._kbd_changed)
+            sl.addWidget(self.kbd_combo)
             layout.addWidget(side)
 
             self.stack = QtWidgets.QStackedWidget(); layout.addWidget(self.stack, 1)
@@ -1254,6 +1377,7 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
                 "monitor": NetMonitorPage(self),
                 "forensics": AppStorePage(self.store.section("forensics"), self),
                 "reversing": AppStorePage(self.store.section("reversing"), self),
+                "assistant": AssistantPage(self),
                 "catalog": CatalogPage(self),
                 "privacy": PrivacyPage(self),
                 "projects": CliBackedPage(L("Progetti", "Projects"),
@@ -1270,7 +1394,8 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             self.nav.blockSignals(True); self.nav.clear()
             icons = {"explore": "network-wireless", "dashboard": "dashboard-show",
                      "monitor": "network-wired", "forensics": "drive-harddisk",
-                     "reversing": "applications-development", "catalog": "applications-utilities",
+                     "reversing": "applications-development", "assistant": "help-faq",
+                     "catalog": "applications-utilities",
                      "privacy": "security-high", "projects": "folder",
                      "reports": "x-office-document", "learn": "help-contents"}
             for key, beginner_ok in PAGE_DEFS:
@@ -1303,6 +1428,16 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             if self.mode is Mode.BEGINNER and not beginner_ok:
                 key = "explore"
             self.go(key)
+
+        def _kbd_changed(self, idx):
+            code = self.kbd_combo.itemData(idx)
+            if not code:
+                return
+            try:
+                kbd.apply_layout(code)
+                self.log_operation(" ".join(kbd.plan_set(code)), 0)
+            except Exception as e:
+                self.statusBar().showMessage(L(f"Tastiera: {e}", f"Keyboard: {e}"), 6000)
 
         def log_operation(self, command, returncode):
             self.operations.append((command, returncode))

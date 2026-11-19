@@ -110,6 +110,17 @@ tra il router e il resto della rete. Security Center → **Monitor di rete**:
 chi» e i nomi dei siti; i contenuti cifrati (HTTPS) restano illeggibili. Usalo
 solo sulla tua rete o su una rete per cui hai l'autorizzazione.
 
+## 6-quater. Cambiare la tastiera e chiedere all'assistente
+**Tastiera**: in basso a sinistra, sotto «Modalità», c'è il menu **Tastiera**.
+Scegli il tuo layout (è indipendente dalla lingua dell'interfaccia): cambia
+subito e viene ricordato.
+
+**Assistente AI**: la voce **Assistente AI** nel menu a sinistra ti permette di
+fare domande (sulla sicurezza, sul Monitor di rete, sulla privacy…). Anche nel
+**Monitor di rete** c'è un riquadro «Chiedi all'AI cosa stai vedendo»: ti spiega
+i dispositivi e i siti che compaiono. Tutto resta sul tuo computer. Se è avviato
+un modello AI locale risponde a domande libere; altrimenti dà spiegazioni di base.
+
 ## 7. Navigare in modo anonimo
 - Barra di stato → icona privacy → scegli **Anonimato Tor**.
 - Si attiva il *kill-switch*: se Tor non funziona, la rete viene **bloccata**
