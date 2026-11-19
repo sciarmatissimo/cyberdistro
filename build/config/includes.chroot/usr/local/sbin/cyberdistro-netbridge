@@ -1,0 +1,89 @@
+#!/bin/sh
+# cyberdistro-netbridge — create/destroy a transparent monitoring bridge from
+# two network interfaces, for the Security Center "Network Monitor" wizard.
+#
+#   cyberdistro-netbridge create <if1> <if2> [--force]
+#   cyberdistro-netbridge destroy
+#   cyberdistro-netbridge status
+#
+# The bridge (br0) has NO IP address: the PC becomes a transparent "bump in the
+# wire" placed between two segments, so traffic passes through unchanged and can
+# be observed (passively) on br0. We refuse to enslave the interface that holds
+# the default route (usually the box's own management link) unless --force.
+set -eu
+
+BR=br0
+[ "$(id -u)" = 0 ] || { echo "!! Richiede privilegi di amministratore (pkexec)."; exit 1; }
+
+default_iface() { ip -o route show default 2>/dev/null | awk '{print $5; exit}'; }
+
+cmd_create() {
+    IF1="$1"; IF2="$2"; FORCE="${3:-}"
+    [ -n "$IF1" ] && [ -n "$IF2" ] || { echo "Uso: $0 create <if1> <if2> [--force]"; exit 2; }
+    [ "$IF1" != "$IF2" ] || { echo "!! Le due schede devono essere diverse."; exit 2; }
+    for i in "$IF1" "$IF2"; do
+        [ -e "/sys/class/net/$i" ] || { echo "!! Interfaccia inesistente: $i"; exit 2; }
+    done
+    DEF="$(default_iface)"
+    if [ "$FORCE" != "--force" ] && { [ "$IF1" = "$DEF" ] || [ "$IF2" = "$DEF" ]; }; then
+        echo "!! $DEF ha la rotta predefinita (è il tuo collegamento di gestione):"
+        echo "   usarla nel bridge potrebbe tagliarti fuori. Usa --force se è voluto."
+        exit 3
+    fi
+
+    echo ">> Creo il bridge trasparente $BR con $IF1 + $IF2 ..."
+    # NetworkManager must not fight us over the two NICs.
+    if command -v nmcli >/dev/null 2>&1; then
+        nmcli dev set "$IF1" managed no >/dev/null 2>&1 || true
+        nmcli dev set "$IF2" managed no >/dev/null 2>&1 || true
+    fi
+    ip link add name "$BR" type bridge 2>/dev/null || true
+    # bridge must forward even "protected" L2 frames; keep STP off (pure tap).
+    ip link set "$BR" type bridge stp_state 0 2>/dev/null || true
+    for i in "$IF1" "$IF2"; do
+        ip addr flush dev "$i" 2>/dev/null || true
+        ip link set "$i" down 2>/dev/null || true
+        ip link set "$i" master "$BR"
+        ip link set "$i" promisc on
+        ip link set "$i" up
+    done
+    ip link set "$BR" up
+    echo ">> Fatto. Il bridge non ha indirizzo IP (trasparente)."
+    cmd_status
+}
+
+cmd_destroy() {
+    [ -e "/sys/class/net/$BR" ] || { echo ">> Nessun bridge $BR da rimuovere."; exit 0; }
+    echo ">> Rimuovo il bridge $BR ..."
+    for path in "/sys/class/net/$BR/brif/"*; do
+        [ -e "$path" ] || continue
+        i="$(basename "$path")"
+        ip link set "$i" nomaster 2>/dev/null || true
+        ip link set "$i" promisc off 2>/dev/null || true
+        if command -v nmcli >/dev/null 2>&1; then
+            nmcli dev set "$i" managed yes >/dev/null 2>&1 || true
+        fi
+    done
+    ip link set "$BR" down 2>/dev/null || true
+    ip link delete "$BR" type bridge 2>/dev/null || true
+    echo ">> Bridge rimosso."
+}
+
+cmd_status() {
+    if [ -e "/sys/class/net/$BR" ]; then
+        echo "Bridge $BR: attivo"
+        ports=""; for p in "/sys/class/net/$BR/brif/"*; do [ -e "$p" ] && ports="$ports $(basename "$p")"; done
+        echo "Porte:$ports"
+        ip -br addr show "$BR" 2>/dev/null || true
+    else
+        echo "Bridge $BR: non presente"
+    fi
+}
+
+ACTION="${1:-}"; shift 2>/dev/null || true
+case "$ACTION" in
+    create)  cmd_create "${1:-}" "${2:-}" "${3:-}" ;;
+    destroy) cmd_destroy ;;
+    status)  cmd_status ;;
+    *) echo "Uso: $0 create <if1> <if2> [--force] | destroy | status"; exit 2 ;;
+esac

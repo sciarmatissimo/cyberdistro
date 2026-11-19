@@ -27,16 +27,32 @@ echo cyberdistro > /etc/hostname
 grep -q '127.0.1.1[[:space:]]\+cyberdistro' /etc/hosts 2>/dev/null \
     || echo "127.0.1.1 cyberdistro" >> /etc/hosts
 
-# Italian keyboard + it/en locales as sensible defaults (best-effort).
+# Language edition (it|en): keyboard, default locale, and the CYBERDISTRO_LANG
+# the Security Center reads for its default UI language. Both locales are always
+# generated so the user can switch at runtime.
+CD_LANG="$(cat /etc/cyberdistro/lang 2>/dev/null | tr -d '[:space:]')"
+[ "$CD_LANG" = en ] || CD_LANG=it
+case "$CD_LANG" in
+    en) XKB=us; LOC=en_US.UTF-8 ;;
+    *)  XKB=it; LOC=it_IT.UTF-8 ;;
+esac
 if [ -f /etc/default/keyboard ]; then
-    sed -i 's/^XKBLAYOUT=.*/XKBLAYOUT="it"/' /etc/default/keyboard || true
+    sed -i "s/^XKBLAYOUT=.*/XKBLAYOUT=\"$XKB\"/" /etc/default/keyboard || true
 else
-    printf 'XKBLAYOUT="it"\nXKBMODEL="pc105"\n' > /etc/default/keyboard || true
+    printf 'XKBLAYOUT="%s"\nXKBMODEL="pc105"\n' "$XKB" > /etc/default/keyboard || true
 fi
 if [ -f /etc/locale.gen ]; then
     sed -i 's/^# *\(it_IT.UTF-8 UTF-8\)/\1/; s/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen || true
     locale-gen >/dev/null 2>&1 || true
 fi
-printf 'LANG=it_IT.UTF-8\n' > /etc/default/locale 2>/dev/null || true
+printf 'LANG=%s\n' "$LOC" > /etc/default/locale 2>/dev/null || true
+# Make CYBERDISTRO_LANG available to every session (PAM reads /etc/environment),
+# so the Security Center opens in the edition's language.
+if grep -q '^CYBERDISTRO_LANG=' /etc/environment 2>/dev/null; then
+    sed -i "s/^CYBERDISTRO_LANG=.*/CYBERDISTRO_LANG=$CD_LANG/" /etc/environment
+else
+    echo "CYBERDISTRO_LANG=$CD_LANG" >> /etc/environment
+fi
+echo "I: language edition = $CD_LANG (kbd=$XKB, locale=$LOC)"
 
 echo "I: live user '${U}' baked (password set, groups applied, hostname=cyberdistro)"

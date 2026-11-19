@@ -1,5 +1,27 @@
 # 03 — Stato puntuale e limitazioni note
 
+## Novità 0.4.0-alpha (2026-11-19)
+- **Monitor di rete (bridge trasparente)**: nuova modalità guidata nel Security
+  Center (voce nel menu a sinistra, visibile anche in Principiante). Wizard a 4
+  passi: conferma autorizzazione → scelta delle due schede → creazione di un
+  bridge L2 senza IP (trasparente) via helper privilegiato
+  `/usr/local/sbin/cyberdistro-netbridge` (pkexec) → cattura con Wireshark già
+  filtrata + vista visuale dei dispositivi (tile) e dei siti contattati
+  (da DNS/SNI via tshark). Core `tools/netmonitor.py` con parser puri
+  (interfacce bridgeable, riepilogo tshark) e 7 test unitari. Solo osservazione
+  passiva; rifiuta di mettere nel bridge la scheda con la rotta Internet se non
+  forzato. Cattura non-root abilitata (hook 0300: dumpcap + gruppo wireshark).
+- **Due edizioni di lingua (Italiano e Inglese)**: la GUI è bilingue (helper
+  `L(it,en)` + i18n da `CYBERDISTRO_LANG`), con catalogo on-demand tradotto.
+  `build.sh` accetta `CYBERDISTRO_EDITION_LANG=it|en` (+ `CYBERDISTRO_MULTILANG=1`
+  per i nomi ISO con suffisso) e imposta locale, tastiera e `CYBERDISTRO_LANG`
+  in `/etc/environment` (hook 0650, auto/config). Il workflow costruisce le due
+  ISO in parallelo e le pubblica come due asset della stessa release.
+- **Verifica**: 49 test unitari; smoke test GUI offscreen eseguito in IT e EN
+  (naviga tutte le pagine, installa una app, percorre il wizard monitor con
+  bridge/cattura simulati e popola la vista visuale) con screenshot per lingua.
+
+
 ## Novità 0.3.0-alpha (2026-11-01)
 - **Security Center**: due nuove sezioni nel menu a sinistra, visibili anche in
   modalità Principiante:

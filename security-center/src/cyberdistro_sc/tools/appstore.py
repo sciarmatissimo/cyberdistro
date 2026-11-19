@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 
 import yaml
 
+from ..i18n import default_lang
+
 INSTALL_HELPER = "/usr/local/sbin/cyberdistro-install-app"
 VALID_SOURCES = ("debian", "kali", "pip")
 VALID_LAUNCH = ("gui", "gui-root", "web", "terminal")
@@ -39,7 +41,25 @@ class App:
     desc_it: str = ""
     use_it: str = ""
     note_it: str = ""
+    desc_en: str = ""
+    use_en: str = ""
+    note_en: str = ""
     check_import: str = ""       # if set, "installed" means this module imports
+
+    # Localized accessors (fall back to Italian when a translation is absent).
+    @property
+    def desc(self) -> str:
+        return (self.desc_en if default_lang() == "en" and self.desc_en else self.desc_it)
+
+    @property
+    def use(self) -> str:
+        return (self.use_en if default_lang() == "en" and self.use_en else self.use_it)
+
+    @property
+    def note(self) -> str:
+        if default_lang() == "en":
+            return self.note_en or self.note_it
+        return self.note_it
 
     # ---- validation -------------------------------------------------
     def validate(self) -> None:
@@ -127,6 +147,16 @@ class Section:
     icon: str
     intro_it: str
     apps: list[App] = field(default_factory=list)
+    title_en: str = ""
+    intro_en: str = ""
+
+    @property
+    def title(self) -> str:
+        return (self.title_en if default_lang() == "en" and self.title_en else self.title_it)
+
+    @property
+    def intro(self) -> str:
+        return (self.intro_en if default_lang() == "en" and self.intro_en else self.intro_it)
 
 
 class AppStore:
@@ -152,7 +182,10 @@ class AppStore:
                     package=a["package"], source=a["source"], binary=a["binary"],
                     gui=bool(a.get("gui", False)), launch=a["launch"],
                     desc_it=a.get("desc_it", ""), use_it=a.get("use_it", ""),
-                    note_it=a.get("note_it", ""), check_import=a.get("check_import", ""),
+                    note_it=a.get("note_it", ""),
+                    desc_en=a.get("desc_en", ""), use_en=a.get("use_en", ""),
+                    note_en=a.get("note_en", ""),
+                    check_import=a.get("check_import", ""),
                 )
                 app.validate()
                 apps.append(app)
@@ -161,6 +194,7 @@ class AppStore:
             sections.append(Section(
                 id=s["id"], title_it=s["title_it"], icon=s.get("icon", "applications-other"),
                 intro_it=s.get("intro_it", "").strip(), apps=apps,
+                title_en=s.get("title_en", ""), intro_en=s.get("intro_en", "").strip(),
             ))
         return cls(sections)
 

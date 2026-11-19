@@ -95,6 +95,21 @@ Consigli per iniziare, con strumenti grafici semplici:
 > Con la **persistenza cifrata** gli strumenti installati restano anche dopo il
 > riavvio; in modalità Live senza persistenza vanno reinstallati a ogni avvio.
 
+## 6-ter. Monitor di rete (vedere il traffico)
+Con due schede di rete puoi trasformare il PC in una «sonda» trasparente messa
+tra il router e il resto della rete. Security Center → **Monitor di rete**:
+1. Conferma che è la tua rete (o che sei autorizzato).
+2. Scegli le due schede (una verso il router, una verso il resto della rete).
+3. Premi **Crea il bridge**: le due schede diventano un «ponte» senza indirizzo
+   IP, invisibile, e il traffico passa attraverso.
+4. Premi **Avvia la cattura**: si apre Wireshark già filtrato e vedi, in modo
+   visuale, i **dispositivi** sulla rete (una tile ciascuno) e i **siti
+   contattati**. Alla fine premi **Smonta il bridge**.
+
+È un ascolto **passivo**: non modifica nulla. Vedrai soprattutto «chi parla con
+chi» e i nomi dei siti; i contenuti cifrati (HTTPS) restano illeggibili. Usalo
+solo sulla tua rete o su una rete per cui hai l'autorizzazione.
+
 ## 7. Navigare in modo anonimo
 - Barra di stato → icona privacy → scegli **Anonimato Tor**.
 - Si attiva il *kill-switch*: se Tor non funziona, la rete viene **bloccata**

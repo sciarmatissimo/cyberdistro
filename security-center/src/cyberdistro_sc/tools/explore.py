@@ -133,13 +133,16 @@ class LocalNetwork:
 
     @property
     def title(self) -> str:
+        from ..i18n import default_lang
+        en = default_lang() == "en"
         if self.kind == "wifi" and self.ssid:
             return f"Wi‑Fi «{self.ssid}»"
         if self.kind == "wifi":
             return f"Wi‑Fi ({self.interface})"
         if self.kind == "ethernet":
-            return f"Rete cablata ({self.interface})"
-        return f"Rete ({self.interface})"
+            return (f"Wired network ({self.interface})" if en
+                    else f"Rete cablata ({self.interface})")
+        return (f"Network ({self.interface})" if en else f"Rete ({self.interface})")
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Allow the live user to capture packets without being root (needed by the
+# Security Center "Network Monitor" and by Wireshark/tshark on the bridge).
+# Debian ships dumpcap setuid-off by default; we enable the non-superuser path
+# and grant dumpcap the capabilities it needs. The 'analyst' user is already in
+# the 'wireshark' group (see hook 0650).
+set -e
+
+if [ -x /usr/bin/dumpcap ]; then
+    echo "wireshark-common wireshark-common/install-setuid boolean true" \
+        | debconf-set-selections 2>/dev/null || true
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure wireshark-common 2>/dev/null || true
+    # Prefer file capabilities over setuid when available.
+    if command -v setcap >/dev/null 2>&1; then
+        setcap cap_net_raw,cap_net_admin+eip /usr/bin/dumpcap 2>/dev/null || true
+    fi
+    chgrp wireshark /usr/bin/dumpcap 2>/dev/null || true
+    chmod 0750 /usr/bin/dumpcap 2>/dev/null || true
+    echo "I: non-root packet capture enabled (dumpcap)"
+else
+    echo "W: dumpcap not present; capture will require root"
+fi

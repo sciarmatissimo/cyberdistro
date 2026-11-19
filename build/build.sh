@@ -18,7 +18,19 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 VERSION="$(cat "$ROOT/VERSION" 2>/dev/null || echo 0.1.0)"
-OUT="$ROOT/iso/CyberDistro-PC-x86_64.iso"
+
+# Language edition (it|en). The English ISO ships an English UI + locale/keyboard.
+# When CYBERDISTRO_EDITION_LANG is unset we keep the classic, unsuffixed name.
+EDITION_LANG="${CYBERDISTRO_EDITION_LANG:-it}"
+case "$EDITION_LANG" in it|en) : ;; *) echo "invalid CYBERDISTRO_EDITION_LANG=$EDITION_LANG" >&2; exit 2;; esac
+export CYBERDISTRO_EDITION_LANG="$EDITION_LANG"
+# Suffix the ISO name per language when building the multi-language set
+# (CYBERDISTRO_MULTILANG=1); otherwise keep the classic unsuffixed name.
+if [ -n "${CYBERDISTRO_MULTILANG:-}" ]; then
+    OUT="$ROOT/iso/CyberDistro-PC-x86_64-${EDITION_LANG}.iso"
+else
+    OUT="$ROOT/iso/CyberDistro-PC-x86_64.iso"
+fi
 
 log(){ printf '\033[1;36m[build]\033[0m %s\n' "$*"; }
 die(){ printf '\033[1;31m[build:ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -33,6 +45,11 @@ log "staging Security Center and privacy sources into chroot includes"
 STAGE="config/includes.chroot/opt/cyberdistro-src"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
+# Language edition marker, read by hooks (locale/keyboard) and the desktop
+# session (CYBERDISTRO_LANG → Security Center default language).
+install -D -m644 /dev/stdin "config/includes.chroot/etc/cyberdistro/lang" <<LANGEOF
+${EDITION_LANG}
+LANGEOF
 cp -a "$ROOT/security-center" "$STAGE/"
 cp -a "$ROOT/privacy"         "$STAGE/"
 cp -a "$ROOT/forensics"       "$STAGE/"

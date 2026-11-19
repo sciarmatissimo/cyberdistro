@@ -80,12 +80,20 @@ def wait(ms):
 
 errors = []
 
-# 1) Beginner mode: nav must contain Esplora first and hide pro-only pages.
+# 1) Beginner mode: nav starts with Explore and hides pro-only pages.
+#    Assert on page KEYS (UserRole), not labels, so the test is language-neutral.
 assert win.mode is Mode.BEGINNER
-labels = [win.nav.item(i).text() for i in range(win.nav.count())]
-print("[nav beginner]", labels)
-assert labels[0] == "Esplora", labels
-assert "Strumenti" not in labels and "Progetti" not in labels
+
+
+def nav_keys():
+    return [win.nav.item(i).data(QtCore.Qt.UserRole) for i in range(win.nav.count())]
+
+
+keys = nav_keys()
+print("[nav beginner]", keys)
+assert keys[0] == "explore", keys
+assert "catalog" not in keys and "projects" not in keys  # pro-only hidden
+assert "monitor" in keys  # the new guided page is beginner-visible
 
 win.go("dashboard"); shot("01-beginner-panoramica")
 win.go("explore"); shot("02-beginner-esplora-vuoto")
@@ -161,10 +169,10 @@ print("[forensics] apps:", [c.app.id for c in forx.cards])
 assert forx.cards and forx.cards[0].app.gui
 win.go("forensics"); shot("11-beginner-forense")
 
-# click "Installa e usa" on the first card, wait for the worker, verify it
+# click "Install and use" on the first card, wait for the worker, verify it
 # flips to installed and launches.
 card0 = forx.cards[0]
-assert "Installa" in card0.btn.text()
+assert not card0.app.installed()
 card0._on_click()
 for _ in range(50):
     wait(50)
@@ -181,21 +189,73 @@ print("[reversing] apps:", [c.app.id for c in revx.cards])
 assert any(c.app.id == "ghidra" for c in revx.cards)
 win.go("reversing"); shot("13-beginner-reversing")
 
-# 4) Privacy + Impara pages.
+# 3c) Network monitor wizard. Stub the privileged bridge + capture so nothing
+#     real runs, and feed fake tshark rows to populate the visual view.
+from cyberdistro_sc.tools import netmonitor as _NM  # noqa: E402
+
+_NM.list_interfaces = lambda run=None: [
+    _NM.Interface(name="eth0", mac="aa:bb:cc:00:00:01", kind="wired", carrier=True,
+                  addresses=["192.168.1.5/24"], is_default_route=True),
+    _NM.Interface(name="eth1", mac="aa:bb:cc:00:00:02", kind="wired", carrier=True),
+]
+
+
+class _BridgeProc:
+    returncode = 0
+    stdout = "Bridge br0: attivo\n"
+    stderr = ""
+
+
+_NM.run_bridge = lambda argv, runner=None: _BridgeProc()
+_NM.run_capture = lambda argv, spawner=None: None
+_NM.wireshark_available = lambda: True
+_NM.tshark_available = lambda: False  # skip QProcess in the headless test
+
+mon = win.pages["monitor"]
+win.go("monitor"); shot("14-monitor-step1-autorizzazione")
+mon.chk_auth.setChecked(True)
+mon._goto(1)                              # interfaces
+assert len(mon.ifaces) == 2, mon.ifaces
+shot("15-monitor-step2-schede")
+mon._goto(2)                              # bridge step
+mon.create_bridge_confirmed = True
+# create_bridge pops a confirm dialog; drive it directly via the worker path
+import cyberdistro_sc.tools.netmonitor as _nm2  # noqa
+mon._worker = None
+# bypass the modal by calling the worker body directly
+proc = _NM.run_bridge(_NM.plan_bridge_create("eth0", "eth1"))
+mon._bridge_done(proc)
+assert mon._bridge_up
+shot("16-monitor-step3-bridge")
+# now on the monitor step: feed fake traffic and refresh the visual view
+SAMPLE = "\n".join([
+    "aa:bb:cc:00:00:11\t192.168.1.23\t8.8.8.8\texample.com\t\t",
+    "aa:bb:cc:00:00:11\t192.168.1.23\t93.184.216.34\t\texample.com\t",
+    "aa:bb:cc:00:00:22\t192.168.1.50\t1.1.1.1\t\tcdn.shop.net\t",
+    "aa:bb:cc:00:00:22\t192.168.1.50\t1.1.1.1\t\t\tnews.example.org",
+])
+mon._feed_summary_text(SAMPLE)
+mon._refresh_visual()
+print("[monitor] devices:", mon.dev_grid.count(), "sites:", mon.site_list.count())
+assert mon.dev_grid.count() == 2 and mon.site_list.count() >= 3
+shot("17-monitor-step4-traffico")
+mon.teardown()
+assert not mon._bridge_up
+
+# 4) Privacy + Learn pages.
 win.go("privacy"); shot("06-privacy")
 win.go("learn"); shot("07-impara")
 
-# 5) Switch to Professional: full nav, dashboard changes, then back (reversible).
+# 5) Switch to Professional: full nav (incl. pro-only), then back (reversible).
 win.mode_combo.setCurrentIndex(list(Mode).index(Mode.PROFESSIONAL))
-labels = [win.nav.item(i).text() for i in range(win.nav.count())]
-print("[nav professional]", labels)
-assert "Strumenti" in labels and "Progetti" in labels and "Esplora" in labels
+pkeys = nav_keys()
+print("[nav professional]", pkeys)
+assert "catalog" in pkeys and "projects" in pkeys and "explore" in pkeys
 win.go("dashboard"); shot("08-pro-panoramica")
 win.go("catalog"); shot("09-pro-strumenti")
 win.go("explore"); shot("10-pro-esplora")
 win.mode_combo.setCurrentIndex(list(Mode).index(Mode.BEGINNER))
-labels = [win.nav.item(i).text() for i in range(win.nav.count())]
-assert "Strumenti" not in labels
+assert "catalog" not in nav_keys()
 # device list survived the mode round-trip (mode never drops results)
 assert explore.net_grid.count() == len(explore.net_devices)
 

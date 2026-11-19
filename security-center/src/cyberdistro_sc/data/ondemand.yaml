@@ -19,6 +19,7 @@
 sections:
   - id: forensics
     title_it: "Forense e acquisizione"
+    title_en: "Forensics & acquisition"
     icon: "drive-harddisk"
     intro_it: >
       Copia i dischi in modo forense (senza alterarli), verifica che la copia sia
@@ -33,7 +34,9 @@ sections:
         gui: true
         launch: gui-root
         desc_it: "Crea l'immagine forense di un disco o di una chiavetta con pochi clic."
+        desc_en: "Create a forensic image of a disk or USB stick in a few clicks."
         use_it: "Hai una USB o un disco da analizzare: Guymager ne fa una copia esatta (E01 o raw) calcolando l'hash, con una finestra grafica semplice. È il punto di partenza di quasi ogni analisi."
+        use_en: "You have a USB stick or disk to analyze: Guymager makes an exact copy (E01 or raw) and computes its hash, in a simple graphical window. It is the starting point of almost every analysis."
       - id: gnome-disks
         name: "Dischi (GNOME Disks)"
         package: gnome-disk-utility
@@ -42,7 +45,9 @@ sections:
         gui: true
         launch: gui
         desc_it: "Gestore dischi grafico: vedi i dispositivi, crea o ripristina immagini, controlla lo stato (SMART)."
+        desc_en: "Graphical disk manager: see devices, create or restore images, check health (SMART)."
         use_it: "Per guardare quali dischi e partizioni ci sono, salvare l'immagine di una chiavetta o controllare la salute di un disco, senza usare il terminale."
+        use_en: "To see which disks and partitions exist, save the image of a USB stick, or check a disk's health, without using the terminal."
       - id: autopsy
         name: "Autopsy"
         package: autopsy
@@ -51,7 +56,9 @@ sections:
         gui: true
         launch: web
         desc_it: "Interfaccia grafica (nel browser) per analizzare un'immagine disco: file, cancellati, timeline, parole chiave."
+        desc_en: "Graphical interface (in the browser) to analyze a disk image: files, deleted items, timeline, keywords."
         use_it: "Dopo aver creato l'immagine con Guymager, apri Autopsy per sfogliare il contenuto, ritrovare file cancellati e cercare parole chiave come faresti con un esplora file."
+        use_en: "After imaging with Guymager, open Autopsy to browse the contents, recover deleted files and search for keywords as you would with a file explorer."
       - id: testdisk
         name: "TestDisk / PhotoRec"
         package: testdisk
@@ -60,7 +67,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Recupera partizioni perse e file cancellati con una procedura a menu guidata."
+        desc_en: "Recover lost partitions and deleted files with a guided, menu-driven procedure."
         use_it: "Hai cancellato per errore foto o documenti, o una chiavetta non si apre più: PhotoRec li recupera seguendo un menu passo-passo."
+        use_en: "You deleted photos or documents by mistake, or a USB stick no longer opens: PhotoRec recovers them following a step-by-step menu."
       - id: ewf-tools
         name: "Strumenti E01 (libewf)"
         package: ewf-tools
@@ -69,7 +78,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Acquisisce ed esamina immagini nel formato forense standard E01 (con metadati del caso e hash)."
+        desc_en: "Acquire and examine images in the standard forensic E01 format (with case metadata and hash)."
         use_it: "Quando l'immagine deve finire in una perizia: 'ewfacquire' chiede numero reperto, operatore e note e produce un file E01 verificabile."
+        use_en: "When the image has to go into a report: 'ewfacquire' asks for exhibit number, operator and notes and produces a verifiable E01 file."
       - id: imaging-cli
         name: "Copia forense da terminale (dc3dd · dcfldd · ddrescue)"
         package: dc3dd dcfldd gddrescue
@@ -78,7 +89,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Copia bit-a-bit da riga di comando: dc3dd/dcfldd con hash integrato, ddrescue per supporti danneggiati."
+        desc_en: "Bit-for-bit copy from the command line: dc3dd/dcfldd with built-in hashing, ddrescue for damaged media."
         use_it: "Per il massimo controllo, o quando un disco è danneggiato: ddrescue salva tutto il leggibile saltando i settori rotti e può riprendere dove si era fermato."
+        use_en: "For maximum control, or when a disk is damaged: ddrescue saves everything readable, skipping bad sectors, and can resume where it stopped."
       - id: carving
         name: "Recupero file (foremost · scalpel)"
         package: foremost scalpel
@@ -87,7 +100,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "File carving: ritrova file (JPEG, PDF, ZIP…) nei dati grezzi anche senza filesystem."
+        desc_en: "File carving: find files (JPEG, PDF, ZIP…) in raw data even without a filesystem."
         use_it: "Su un'immagine di una scheda formattata, 'foremost -t jpg,pdf -i img -o out/' ricostruisce foto e documenti cancellati divisi per tipo."
+        use_en: "On an image of a formatted card, 'foremost -t jpg,pdf -i img -o out/' rebuilds deleted photos and documents sorted by type."
       - id: plaso
         name: "Timeline forense (Plaso)"
         package: plaso
@@ -96,7 +111,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Costruisce una super-timeline: ordina cronologicamente migliaia di eventi (file, log, cronologia, registro)."
+        desc_en: "Builds a super-timeline: thousands of events (files, logs, history, registry) in chronological order."
         use_it: "Per rispondere a «cosa è successo e quando»: estrae da un'immagine ogni evento con data e ora e li mette in ordine, così ricostruisci la sequenza dei fatti."
+        use_en: "To answer 'what happened and when': it extracts every event with its date and time from an image and puts them in order, so you reconstruct the sequence of events."
       - id: volatility3
         name: "Analisi memoria (Volatility 3)"
         package: volatility3
@@ -105,7 +122,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Analizza un dump della RAM: processi attivi, connessioni di rete, malware presente solo in memoria."
+        desc_en: "Analyze a RAM dump: running processes, network connections, malware that lives only in memory."
         use_it: "Su un PC compromesso, da un dump della RAM scopri i processi in esecuzione e le connessioni sospette che sul disco non lasciano traccia (malware 'fileless')."
+        use_en: "On a compromised PC, from a RAM dump you discover running processes and suspicious connections that leave no trace on disk ('fileless' malware)."
       - id: exiftool
         name: "Metadati file (ExifTool)"
         package: libimage-exiftool-perl
@@ -114,7 +133,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Legge i metadati nascosti di foto e documenti (data, dispositivo, posizione GPS, autore)."
+        desc_en: "Reads the hidden metadata of photos and documents (date, device, GPS location, author)."
         use_it: "Per sapere con quale fotocamera e dove è stata scattata una foto, o chi e quando ha creato un PDF: 'exiftool file'."
+        use_en: "To know which camera took a photo and where, or who created a PDF and when: 'exiftool file'."
       - id: hashdeep
         name: "Verifica integrità (hashdeep)"
         package: hashdeep
@@ -123,15 +144,22 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Calcola e confronta gli hash di interi alberi di cartelle (catena di custodia)."
+        desc_en: "Computes and compares the hashes of whole folder trees (chain of custody)."
         use_it: "Per dimostrare che un insieme di prove non è cambiato: crei gli hash all'inizio e li riverifichi dopo ogni trasferimento."
+        use_en: "To prove a set of evidence has not changed: you create the hashes at the start and re-verify them after each transfer."
 
   - id: reversing
     title_it: "Debug e analisi binaria"
+    title_en: "Debugging & binary analysis"
     icon: "applications-development"
     intro_it: >
       Capire cosa fa un programma di cui non hai il codice (un eseguibile sospetto,
       un malware, un firmware). Prima analisi statica (senza eseguirlo), poi
       dinamica (osservandolo mentre gira) in un ambiente isolato.
+    intro_en: >
+      Understand what a program you have no source for does (a suspicious
+      executable, malware, firmware). First static analysis (without running
+      it), then dynamic (watching it run) in an isolated environment.
     apps:
       - id: ghidra
         name: "Ghidra"
@@ -141,8 +169,11 @@ sections:
         gui: true
         launch: gui
         desc_it: "Suite grafica di reverse engineering: decompila un eseguibile e te ne mostra il funzionamento in modo leggibile."
+        desc_en: "Graphical reverse-engineering suite: decompiles an executable and shows how it works in a readable way."
         use_it: "Lo strumento di partenza per studiare un binario: apri il file e Ghidra ti mostra funzioni e logica quasi come codice sorgente. Download grande (~800 MB), richiede Internet."
+        use_en: "The go-to tool to study a binary: open the file and Ghidra shows functions and logic almost like source code. Large download (~800 MB), needs Internet."
         note_it: "Fornito dall'archivio Kali (basato su Java). Richiede connessione a Internet per la prima installazione."
+        note_en: "Provided by the Kali archive (Java-based). Needs an internet connection for the first install."
       - id: okteta
         name: "Okteta (editor esadecimale)"
         package: okteta
@@ -151,7 +182,9 @@ sections:
         gui: true
         launch: gui
         desc_it: "Editor esadecimale grafico: guarda e modifica i byte di un file, con decodifica dei valori."
+        desc_en: "Graphical hex editor: view and edit the bytes of a file, with value decoding."
         use_it: "Per ispezionare l'inizio di un file e capirne il tipo, trovare testi nascosti o firme, o modificare un byte: tutto in una finestra grafica semplice."
+        use_en: "To inspect the start of a file and understand its type, find hidden text or signatures, or change a byte: all in a simple graphical window."
       - id: wxhexeditor
         name: "wxHexEditor (file grandi)"
         package: wxhexeditor
@@ -160,7 +193,9 @@ sections:
         gui: true
         launch: gui
         desc_it: "Editor esadecimale grafico capace di aprire file e dischi enormi senza caricarli tutti in memoria."
+        desc_en: "Graphical hex editor able to open huge files and disks without loading them all into memory."
         use_it: "Quando devi ispezionare a mano un'immagine disco da molti GB: wxHexEditor la apre comunque, con ricerca e navigazione."
+        use_en: "When you must inspect a multi-GB disk image by hand: wxHexEditor opens it anyway, with search and navigation."
       - id: clamtk
         name: "Antivirus (ClamTk)"
         package: clamtk
@@ -169,7 +204,9 @@ sections:
         gui: true
         launch: gui
         desc_it: "Interfaccia grafica dell'antivirus ClamAV: analizza file e cartelle con un clic."
+        desc_en: "Graphical interface for the ClamAV antivirus: scan files and folders with one click."
         use_it: "Per controllare se un file scaricato o una cartella contengono malware noto, senza usare comandi: scegli la cartella e premi Scansiona."
+        use_en: "To check whether a downloaded file or a folder contains known malware, without using commands: pick the folder and press Scan."
       - id: gdb
         name: "Debugger (GDB)"
         package: gdb gdb-multiarch
@@ -179,7 +216,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Il debugger: esegue un programma passo-passo, con breakpoint e ispezione di memoria e registri. Include il supporto multi-architettura (ARM, MIPS…)."
+        desc_en: "The debugger: runs a program step by step, with breakpoints and inspection of memory and registers. Includes multi-architecture support (ARM, MIPS…)."
         use_it: "Per capire nel dettaglio cosa fa un binario in un punto preciso, o per studiare il firmware di un dispositivo ARM/IoT in emulazione."
+        use_en: "To understand in detail what a binary does at a precise point, or to study the firmware of an ARM/IoT device under emulation."
       - id: tracers
         name: "Tracciatori (strace · ltrace)"
         package: strace ltrace
@@ -188,7 +227,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Mostrano, mentre il programma gira, le chiamate al sistema (file, rete) e alle librerie."
+        desc_en: "Show, while the program runs, the calls to the system (files, network) and to libraries."
         use_it: "Lanci 'strace ./sospetto' e vedi in chiaro quali file apre e a quali indirizzi si connette, senza leggerne il codice."
+        use_en: "You run 'strace ./suspicious' and see in the clear which files it opens and which addresses it connects to, without reading its code."
       - id: radare2
         name: "radare2"
         package: radare2
@@ -197,8 +238,11 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Framework di reverse engineering da console: disassembla, analizza ed esplora i binari."
+        desc_en: "Console reverse-engineering framework: disassembles, analyzes and explores binaries."
         use_it: "Alternativa a riga di comando a Ghidra, leggera e potente, per esaminare funzioni e stringhe di un eseguibile."
+        use_en: "A command-line alternative to Ghidra, lightweight and powerful, to examine a program's functions and strings."
         note_it: "Fornito dall'archivio Kali. Richiede connessione a Internet."
+        note_en: "Provided by the Kali archive. Needs an internet connection."
       - id: binwalk
         name: "Analisi firmware (binwalk)"
         package: binwalk
@@ -207,7 +251,9 @@ sections:
         gui: false
         launch: terminal
         desc_it: "Riconosce ed estrae i contenuti incorporati in un'immagine di firmware (filesystem, kernel, file compressi)."
+        desc_en: "Recognizes and extracts the contents embedded in a firmware image (filesystem, kernel, compressed files)."
         use_it: "Dato il firmware di un router o di un dispositivo IoT, 'binwalk -e firmware.bin' ne estrae il filesystem interno per esaminarlo."
+        use_en: "Given a router or IoT device firmware, 'binwalk -e firmware.bin' extracts its internal filesystem for examination."
       - id: analysis-libs
         name: "Librerie di analisi (Capstone + Unicorn)"
         package: python3-capstone python3-unicorn
@@ -217,5 +263,8 @@ sections:
         launch: terminal
         check_import: capstone
         desc_it: "Capstone trasforma i byte in istruzioni assembly leggibili; Unicorn emula la CPU per eseguire pezzi di codice in isolamento."
+        desc_en: "Capstone turns bytes into readable assembly instructions; Unicorn emulates the CPU to run pieces of code in isolation."
         use_it: "Per automatizzare in Python l'analisi di un campione: disassemblare con Capstone ed eseguire in sicurezza (sandbox) una singola routine con Unicorn."
+        use_en: "To automate sample analysis in Python: disassemble with Capstone and safely run (sandbox) a single routine with Unicorn."
         note_it: "Librerie Python: dopo l'installazione si aprirà una sessione Python pronta all'uso."
+        note_en: "Python libraries: after installation a ready-to-use Python session opens."
