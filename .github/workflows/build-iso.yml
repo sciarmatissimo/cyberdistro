@@ -182,8 +182,8 @@ jobs:
           } > "$NOTES"
           : > assets.txt
           for lang in it en; do
-            ISO="dist/CyberDistro-PC-x86_64-${lang}.iso"
-            SUM="dist/CyberDistro-PC-x86_64-${lang}.iso.sha256"
+            ISO="dist/iso/CyberDistro-PC-x86_64-${lang}.iso"
+            SUM="dist/iso/CyberDistro-PC-x86_64-${lang}.iso.sha256"
             [ -f "$ISO" ] || continue
             SIZE=$(stat -c%s "$ISO"); HASH=$(awk '{print $1}' "$SUM")
             NAME_IT=$( [ "$lang" = it ] && echo "Italiano" || echo "Inglese" )
@@ -202,8 +202,8 @@ jobs:
             fi
           done
           # one SBOM (packages are identical across editions)
-          if [ -f dist/cyberdistro.cdx.json ]; then
-            cp dist/cyberdistro.cdx.json cyberdistro.cdx.json
+          if [ -f dist/sbom/cyberdistro.cdx.json ]; then
+            cp dist/sbom/cyberdistro.cdx.json cyberdistro.cdx.json
             echo "cyberdistro.cdx.json" >> assets.txt
           fi
           {
@@ -211,6 +211,7 @@ jobs:
             echo "trasparente)» nel Security Center ed edizioni separate Italiano/Inglese."
           } >> "$NOTES"
           echo "Assets:"; cat assets.txt
+          test -s assets.txt || { echo "::error::no assets resolved (check dist/ layout)"; find dist -maxdepth 3 -type f; exit 1; }
 
       - name: Create/update release with both ISOs
         run: |
