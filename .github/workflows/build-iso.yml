@@ -33,6 +33,10 @@ on:
         type: choice
         options: [both, it, en]
         default: both
+      bundle_ai:
+        description: "Bundle the local AI model (conversational assistant out of the box)"
+        type: boolean
+        default: true
   push:
     tags:
       - 'v*'
@@ -105,12 +109,19 @@ jobs:
         env:
           TBB_VERSION: ${{ github.event.inputs.tbb_version || '15.0.26' }}
           LANG_EDITION: ${{ matrix.lang }}
+          # Bundle the local AI model by default (part of the product since
+          # 0.7.0); a manual run can turn it off with bundle_ai=false.
+          DISABLE_AI: ${{ github.event.inputs.bundle_ai == 'false' }}
         run: |
+          BUNDLE_AI=1
+          [ "$DISABLE_AI" = "true" ] && BUNDLE_AI=""
+          echo "Bundle AI model: ${BUNDLE_AI:-no}"
           docker run --rm --privileged \
             -v "$GITHUB_WORKSPACE":/work -w /work \
             -e TBB_VERSION="$TBB_VERSION" \
             -e CYBERDISTRO_MULTILANG=1 \
             -e CYBERDISTRO_EDITION_LANG="$LANG_EDITION" \
+            -e CYBERDISTRO_BUNDLE_AI="$BUNDLE_AI" \
             debian:trixie bash -euxo pipefail -c '
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
@@ -118,6 +129,10 @@ jobs:
                 live-build debootstrap xorriso squashfs-tools mtools dosfstools \
                 grub-pc-bin grub-efi-amd64-bin python3 python3-pip \
                 wget gnupg ca-certificates sudo procps xz-utils libcap2-bin
+              # Toolchain for building the bundled llama.cpp runtime (AI model).
+              if [ -n "${CYBERDISTRO_BUNDLE_AI:-}" ]; then
+                apt-get install -y --no-install-recommends git cmake build-essential
+              fi
               cd build
               ./build.sh
             '
@@ -207,8 +222,10 @@ jobs:
             echo "cyberdistro.cdx.json" >> assets.txt
           fi
           {
-            echo "Release **ALPHA**. Novità 0.4.0: modalità guidata «Monitor di rete (bridge"
-            echo "trasparente)» nel Security Center ed edizioni separate Italiano/Inglese."
+            echo "Release **ALPHA**. Novità 0.7.0: **assistente AI conversazionale 100% locale**"
+            echo "incluso nella ISO (modello Qwen3-0.6B, nessun dato esce dal PC, nessun account)"
+            echo "— si avvia da solo alla prima domanda; selezione del layout di tastiera"
+            echo "indipendente dalla lingua, con applicazione corretta su KDE Plasma."
           } >> "$NOTES"
           echo "Assets:"; cat assets.txt
           test -s assets.txt || { echo "::error::no assets resolved (check dist/ layout)"; find dist -maxdepth 3 -type f; exit 1; }
