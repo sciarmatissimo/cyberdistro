@@ -76,9 +76,33 @@ class TestModelPlumbing(unittest.TestCase):
         self.assertIn("ponte", text.lower())
 
     def test_answer_offline_when_no_model(self):
-        text, used = ai.answer("cos'è il bridge?", prober=lambda u, timeout=1.5: False)
+        text, used = ai.answer("cos'è il bridge?", prober=lambda u, timeout=1.5: False,
+                               starter=lambda: None)
         self.assertFalse(used)
         self.assertTrue(text)
+
+    def test_answer_starts_local_model_on_demand(self):
+        captured = {}
+
+        def transport(url, payload, timeout=60.0):
+            captured["url"] = url
+            return {"choices": [{"message": {"content": "risposta locale"}}]}
+        text, used = ai.answer(
+            "domanda libera",
+            prober=lambda u, timeout=1.5: False,                 # nothing already listening
+            starter=lambda: "http://127.0.0.1:5555/v1/chat/completions",
+            transport=transport)
+        self.assertTrue(used)
+        self.assertEqual(text, "risposta locale")
+        self.assertIn("5555", captured["url"])
+
+    def test_status_reports_model_when_reachable(self):
+        kind, detail = ai.status(prober=lambda u, timeout=1.5: "8080" in u)
+        self.assertEqual(kind, "model")
+
+    def test_status_offline_without_model(self):
+        kind, detail = ai.status(prober=lambda u, timeout=1.5: False)
+        self.assertIn(kind, ("ready", "offline"))
 
 
 if __name__ == "__main__":

@@ -1,12 +1,43 @@
 #!/bin/sh
 # Apply the user's chosen keyboard layout (independent of the UI language).
-# Called at login by the autostart entry, and by the Security Center.
-#   cyberdistro-keyboard apply        # apply the saved choice (or the default)
+# Works on KDE Plasma, where setxkbmap alone is overridden by the kxkb daemon:
+# we also write kxkbrc and reload the keyboard kded module so the change sticks.
 #   cyberdistro-keyboard set <code>   # set + persist a layout now
+#   cyberdistro-keyboard apply        # apply the saved choice (or the default)
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}/cyberdistro/keyboard"
 
+kwrite() {  # kwriteconfig6 or kwriteconfig5
+    if command -v kwriteconfig6 >/dev/null 2>&1; then kwriteconfig6 "$@"
+    elif command -v kwriteconfig5 >/dev/null 2>&1; then kwriteconfig5 "$@"
+    fi
+}
+qd() {      # qdbus6 or qdbus
+    if command -v qdbus6 >/dev/null 2>&1; then qdbus6 "$@" 2>/dev/null
+    elif command -v qdbus >/dev/null 2>&1; then qdbus "$@" 2>/dev/null
+    fi
+}
+
+apply_now() {
+    code="$1"
+    # 1) immediate effect (and the only step outside Plasma)
+    setxkbmap "$code" 2>/dev/null || true
+    # 2) make Plasma adopt and keep it: write kxkbrc, then reload the kxkb module
+    kwrite --file kxkbrc --group Layout --key Use true
+    kwrite --file kxkbrc --group Layout --key LayoutList "$code"
+    kwrite --file kxkbrc --group Layout --key VariantList ""
+    kwrite --file kxkbrc --group Layout --key DisplayNames ""
+    # reload the keyboard kded module (re-reads kxkbrc and re-applies)
+    for kded in org.kde.kded6 org.kde.kded5; do
+        qd "$kded" /kded "${kded}.unloadModule" keyboard
+        qd "$kded" /kded "${kded}.loadModule" keyboard
+    done
+    # and nudge the layout service to index 0 (our single layout)
+    qd org.kde.keyboard /Layouts org.kde.KeyboardLayouts.setLayout 0
+    # re-assert with setxkbmap in case the reload reset to a default
+    setxkbmap "$code" 2>/dev/null || true
+}
+
 default_layout() {
-    # Build-time default from /etc/default/keyboard, else us.
     if [ -r /etc/default/keyboard ]; then
         v="$(sed -n 's/^XKBLAYOUT="\{0,1\}\([a-z,]*\).*/\1/p' /etc/default/keyboard | head -1)"
         [ -n "$v" ] && { echo "${v%%,*}"; return; }
@@ -20,12 +51,12 @@ case "${1:-apply}" in
         case "$code" in [a-z][a-z]*) : ;; *) echo "invalid layout: $code" >&2; exit 2 ;; esac
         mkdir -p "$(dirname "$CFG")"
         printf '%s\n' "$code" > "$CFG"
-        setxkbmap "$code" 2>/dev/null || true
+        apply_now "$code"
         ;;
     apply)
         if [ -r "$CFG" ]; then code="$(tr -d '[:space:]' < "$CFG")"; else code=""; fi
         [ -n "$code" ] || code="$(default_layout)"
-        setxkbmap "$code" 2>/dev/null || true
+        apply_now "$code"
         ;;
     *) echo "Uso: $0 apply | set <code>"; exit 2 ;;
 esac

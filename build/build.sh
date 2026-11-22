@@ -101,6 +101,30 @@ if [ -f "config/archives/kali.list.chroot" ] && [ ! -s "$KALI_KEY" ]; then
     rm -f "$tmpk"
 fi
 
+# 1c) Optional: bundle a small, 100%-local AI model so the assistant answers
+#     free-form questions out of the box (like the Sentinel edition), served on
+#     127.0.0.1 on demand. Opt-in because it enlarges the ISO; the finished ISO
+#     must stay < 2 GiB to be uploadable as a GitHub release asset.
+if [ -n "${CYBERDISTRO_BUNDLE_AI:-}" ]; then
+    log "bundling local AI model (CYBERDISTRO_BUNDLE_AI set)"
+    "$ROOT/scripts/bundle-ai.sh" "$HERE/config/includes.chroot" "${CYBERDISTRO_AI_CACHE:-$HERE/.cache/ai}"
+else
+    log "AI model NOT bundled — assistant uses its offline knowledge base (set CYBERDISTRO_BUNDLE_AI=1 for the full local assistant)."
+    rm -rf "config/includes.chroot/opt/cyberdistro/llama" \
+           "config/includes.chroot/opt/cyberdistro/models" 2>/dev/null || true
+fi
+
+# 1d) Optional: free room by removing large firmware for hardware a USB
+#     security workstation does not use (enterprise/datacenter NICs etc.). The
+#     chroot hook only acts when this marker is staged, so default builds are
+#     untouched.
+TRIM_MARKER="config/includes.chroot/etc/cyberdistro/trim-firmware"
+rm -f "$TRIM_MARKER"
+if [ -n "${CYBERDISTRO_TRIM_FIRMWARE:-}" ]; then
+    log "firmware trim enabled (CYBERDISTRO_TRIM_FIRMWARE set)"
+    install -D -m644 /dev/null "$TRIM_MARKER"
+fi
+
 # 2) Clean previous build state (keep caches unless --clean given).
 if [ "${1:-}" = "--clean" ]; then
     log "lb clean --purge"
@@ -122,6 +146,19 @@ mv "$SRC_ISO" "$OUT"
 
 # 5) Checksum.
 ( cd "$ROOT/iso" && sha256sum "$(basename "$OUT")" > "$(basename "$OUT").sha256" )
+
+# 6) Enforce the GitHub release-asset limit (2 GiB). A bundled-AI build that
+#    overshoots cannot be published, so fail loudly with remedies; a plain
+#    build only warns.
+SZB="$(stat -c%s "$OUT")"
+LIMIT=2147483648
+log "ISO size: $SZB bytes ($((SZB/1024/1024)) MiB)"
+if [ "$SZB" -ge "$LIMIT" ]; then
+    if [ -n "${CYBERDISTRO_BUNDLE_AI:-}" ]; then
+        die "ISO ≥ 2 GiB: too large for a GitHub release asset. Add CYBERDISTRO_TRIM_FIRMWARE=1, or pick a smaller model via CYBERDISTRO_AI_MODEL_REPO/FILE/SHA256."
+    fi
+    log "WARNING: ISO ≥ 2 GiB — it will not upload as a GitHub release asset."
+fi
 log "DONE → $OUT"
 log "sha256 → $OUT.sha256"
 cat "$OUT.sha256"

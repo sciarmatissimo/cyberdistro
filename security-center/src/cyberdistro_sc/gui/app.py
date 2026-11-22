@@ -176,11 +176,13 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
             if not compact:
                 lay.addWidget(muted(L(
                     "Chiedi all'assistente: funziona tutto in locale (nessun dato esce dal "
-                    "PC). Con un modello AI locale avviato risponde a domande libere; "
-                    "altrimenti dà spiegazioni di base.",
-                    "Ask the assistant: everything runs locally (no data leaves the PC). "
-                    "With a local AI model running it answers free-form questions; "
-                    "otherwise it gives basic explanations.")))
+                    "PC). Se è presente un modello AI locale risponde liberamente (si avvia "
+                    "da solo alla prima domanda, può richiedere qualche secondo); altrimenti "
+                    "dà spiegazioni di base.",
+                    "Ask the assistant: everything runs locally (no data leaves the PC). If a "
+                    "local AI model is present it answers freely (it starts itself on your "
+                    "first question, which may take a few seconds); otherwise it gives basic "
+                    "explanations.")))
             row = QtWidgets.QHBoxLayout()
             self.inp = QtWidgets.QLineEdit()
             self.inp.setPlaceholderText(L("Scrivi una domanda… es. «cosa vedo con il bridge?»",
@@ -1153,10 +1155,15 @@ def build_app(argv=None):  # pragma: no cover - requires Qt
                 "Ask a question about security, the Network Monitor, privacy or how to use "
                 "CyberDistro. Everything stays on your computer: no account, no data sent "
                 "online.")))
-            ok, _, _ = ai.available()
-            lay.addWidget(chip(L("Modello AI locale attivo", "Local AI model active") if ok
-                               else L("Nessun modello locale: risposte di base",
-                                      "No local model: basic answers"), ok))
+            state, _ = ai.status()
+            if state == "model":
+                lay.addWidget(chip(L("Modello AI locale attivo", "Local AI model active"), True))
+            elif state == "ready":
+                lay.addWidget(chip(L("Modello AI locale pronto (si avvia alla prima domanda)",
+                                     "Local AI model ready (starts on your first question)"), True))
+            else:
+                lay.addWidget(chip(L("Nessun modello locale: risposte di base",
+                                     "No local model: basic answers"), False))
             lay.addWidget(AssistantBox(win), 1)
 
     class CliBackedPage(QtWidgets.QWidget):

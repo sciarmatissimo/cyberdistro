@@ -118,7 +118,15 @@ def default_layout() -> str:
     return "us"
 
 
+HELPER = "/usr/local/bin/cyberdistro-keyboard"
+
+
 def plan_set(code: str) -> list[str]:
+    """argv that applies a layout. Prefer the Plasma-aware helper (it also
+    updates kxkbrc and reloads the kxkb daemon, otherwise Plasma overrides
+    setxkbmap); fall back to plain setxkbmap when the helper is absent."""
+    if os.path.exists(HELPER):
+        return [HELPER, "set", code]
     return ["setxkbmap", code]
 
 
