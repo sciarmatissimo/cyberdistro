@@ -108,15 +108,27 @@ def build_payload(kind: str, question: str, context: str = "",
     if kind == "ollama":
         return {"model": model, "messages": messages, "stream": False,
                 "options": {"temperature": 0.2}}
+    # For llama.cpp/OpenAI servers: ask reasoning models (e.g. Qwen3) to answer
+    # directly instead of emitting <think> blocks. Unknown keys are ignored by
+    # servers that don't support it.
     return {"model": model, "messages": messages, "stream": False,
-            "temperature": 0.2}
+            "temperature": 0.2,
+            "chat_template_kwargs": {"enable_thinking": False}}
+
+
+_THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL | re.IGNORECASE)
+
+
+def _strip_think(text: str) -> str:
+    """Remove reasoning-model <think>…</think> preambles (e.g. Qwen3)."""
+    return _THINK_RE.sub("", text or "").strip()
 
 
 def parse_response(kind: str, resp: dict) -> str:
     try:
         if kind == "ollama":
-            return (resp.get("message", {}) or {}).get("content", "").strip()
-        return resp["choices"][0]["message"]["content"].strip()
+            return _strip_think((resp.get("message", {}) or {}).get("content", ""))
+        return _strip_think(resp["choices"][0]["message"]["content"])
     except (KeyError, IndexError, TypeError):
         return ""
 

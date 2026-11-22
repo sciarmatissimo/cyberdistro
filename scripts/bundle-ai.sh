@@ -36,7 +36,11 @@ log(){ printf '\033[1;35m[bundle-ai]\033[0m %s\n' "$*"; }
 die(){ printf '\033[1;31m[bundle-ai:ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # Pinned inputs (overridable). Defaults verified against Hugging Face.
-LLAMA_COMMIT="${CYBERDISTRO_LLAMA_COMMIT:-29c720eaf72fcf8e4e61a56a88b994d92668261d}"
+# llama.cpp pinned to b6000 (commit 4762ad7): supports the Qwen3 architecture and
+# still ships the pre-built server web UI committed in-tree, so `llama-server`
+# builds with just a C/C++ toolchain — no Node/npm (newer commits require an
+# npm-built SvelteKit UI). Verified to build and serve the Qwen3-0.6B model.
+LLAMA_COMMIT="${CYBERDISTRO_LLAMA_COMMIT:-4762ad7316dcdec20016ab5985fb46a27902204d}"
 MODEL_REPO="${CYBERDISTRO_AI_MODEL_REPO:-unsloth/Qwen3-0.6B-GGUF}"
 MODEL_REV="${CYBERDISTRO_AI_MODEL_REV:-50968a4468ef4233ed78cd7c3de230dd1d61a56b}"
 MODEL_FILE="${CYBERDISTRO_AI_MODEL_FILE:-Qwen3-0.6B-Q3_K_S.gguf}"

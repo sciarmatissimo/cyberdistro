@@ -51,6 +51,14 @@ class TestModelPlumbing(unittest.TestCase):
             ai.parse_response("ollama", {"message": {"content": " yo "}}), "yo")
         self.assertEqual(ai.parse_response("openai", {"bad": 1}), "")
 
+    def test_parse_response_strips_think_blocks(self):
+        r = {"choices": [{"message": {"content": "<think>ragiono...</think>\nRisposta pulita."}}]}
+        self.assertEqual(ai.parse_response("openai", r), "Risposta pulita.")
+
+    def test_openai_payload_disables_thinking(self):
+        p = ai.build_payload("openai", "ciao")
+        self.assertEqual(p["chat_template_kwargs"]["enable_thinking"], False)
+
     def test_available_uses_prober(self):
         ok, kind, url = ai.available(prober=lambda u, timeout=1.5: "11434" in u)
         self.assertTrue(ok)
