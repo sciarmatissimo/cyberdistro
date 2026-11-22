@@ -14,10 +14,17 @@
 # match — it never ships an unverified blob. Override the pinned inputs with the
 # CYBERDISTRO_AI_* / CYBERDISTRO_LLAMA_COMMIT environment variables.
 #
-# Default model: Qwen2.5-0.5B-Instruct (Apache-2.0), Q4_K_M GGUF (~468 MiB) —
-# chosen so the PC Edition ISO stays within GitHub's 2 GiB per-asset release
-# limit (verify at build time; see the size note in build/build.sh). Requires
-# a build host with: git, cmake, a C/C++ toolchain, wget and ~2 GB RAM.
+# Default model: Qwen3-0.6B (Apache-2.0), Q3_K_S GGUF (~308 MiB) — the newest
+# small dense Qwen (same Qwen3.x family as the Sentinel edition's model) that
+# still leaves ~40 MiB of headroom under GitHub's 2 GiB per-asset release limit,
+# measured against the 1.70 GiB PC base image. The llama runtime is built as a
+# single portable (non-native) backend to stay small. Verify the final ISO size
+# at build time (build/build.sh enforces the 2 GiB limit). Requires a build host
+# with: git, cmake, a C/C++ toolchain, wget and ~2 GB RAM.
+#
+# Fallbacks if space is tight / generous (set CYBERDISTRO_AI_MODEL_FILE + _SHA256):
+#   Qwen3-0.6B-Q2_K.gguf   282.5 MiB  26d035ea15c4a2853e8d20ffc56a76f6164e17dbb6c9e532c5766700c404519d
+#   Qwen3-0.6B-Q3_K_M.gguf 331.0 MiB  30bb9f9222cf58c076277879881a24e7127a10be32076d76d8c70f8defc01f5d  (very tight)
 set -euo pipefail
 
 INC="${1:-}"
@@ -30,10 +37,10 @@ die(){ printf '\033[1;31m[bundle-ai:ERROR]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # Pinned inputs (overridable). Defaults verified against Hugging Face.
 LLAMA_COMMIT="${CYBERDISTRO_LLAMA_COMMIT:-29c720eaf72fcf8e4e61a56a88b994d92668261d}"
-MODEL_REPO="${CYBERDISTRO_AI_MODEL_REPO:-Qwen/Qwen2.5-0.5B-Instruct-GGUF}"
-MODEL_REV="${CYBERDISTRO_AI_MODEL_REV:-9217f5db79a29953eb74d5343926648285ec7e67}"
-MODEL_FILE="${CYBERDISTRO_AI_MODEL_FILE:-qwen2.5-0.5b-instruct-q4_k_m.gguf}"
-MODEL_SHA256="${CYBERDISTRO_AI_MODEL_SHA256:-74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db}"
+MODEL_REPO="${CYBERDISTRO_AI_MODEL_REPO:-unsloth/Qwen3-0.6B-GGUF}"
+MODEL_REV="${CYBERDISTRO_AI_MODEL_REV:-50968a4468ef4233ed78cd7c3de230dd1d61a56b}"
+MODEL_FILE="${CYBERDISTRO_AI_MODEL_FILE:-Qwen3-0.6B-Q3_K_S.gguf}"
+MODEL_SHA256="${CYBERDISTRO_AI_MODEL_SHA256:-1d61e10a443e3e335a979eecde30bab6c2489a1e876632e22e0695178d368b67}"
 MODEL_LICENSE="${CYBERDISTRO_AI_MODEL_LICENSE:-Apache-2.0}"
 
 [ -n "$MODEL_SHA256" ] || die "no model SHA-256 pinned (set CYBERDISTRO_AI_MODEL_SHA256); refusing to ship an unverified model."
@@ -47,8 +54,11 @@ if [ ! -x "$LL/out/llama-server" ]; then
     git init -q "$LL/src"
     git -C "$LL/src" fetch -q --depth 1 https://github.com/ggml-org/llama.cpp "$LLAMA_COMMIT"
     git -C "$LL/src" checkout -q FETCH_HEAD
+    # Single portable backend (baseline x86-64, GGML_NATIVE=OFF): runs on any
+    # x86-64 CPU and keeps the runtime small (~10 MiB) — important for the PC
+    # Edition's tight size budget. The model is tiny, so baseline SIMD is ample.
     cmake -S "$LL/src" -B "$LL/build" -DCMAKE_BUILD_TYPE=Release \
-        -DGGML_NATIVE=OFF -DGGML_BACKEND_DL=ON -DGGML_CPU_ALL_VARIANTS=ON \
+        -DGGML_NATIVE=OFF \
         -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF \
         -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_RPATH='$ORIGIN' -DCMAKE_INSTALL_RPATH='$ORIGIN' >/dev/null
     cmake --build "$LL/build" -j"$(nproc)" --target llama-server >/dev/null

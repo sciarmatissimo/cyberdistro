@@ -114,17 +114,6 @@ else
            "config/includes.chroot/opt/cyberdistro/models" 2>/dev/null || true
 fi
 
-# 1d) Optional: free room by removing large firmware for hardware a USB
-#     security workstation does not use (enterprise/datacenter NICs etc.). The
-#     chroot hook only acts when this marker is staged, so default builds are
-#     untouched.
-TRIM_MARKER="config/includes.chroot/etc/cyberdistro/trim-firmware"
-rm -f "$TRIM_MARKER"
-if [ -n "${CYBERDISTRO_TRIM_FIRMWARE:-}" ]; then
-    log "firmware trim enabled (CYBERDISTRO_TRIM_FIRMWARE set)"
-    install -D -m644 /dev/null "$TRIM_MARKER"
-fi
-
 # 2) Clean previous build state (keep caches unless --clean given).
 if [ "${1:-}" = "--clean" ]; then
     log "lb clean --purge"
@@ -155,7 +144,7 @@ LIMIT=2147483648
 log "ISO size: $SZB bytes ($((SZB/1024/1024)) MiB)"
 if [ "$SZB" -ge "$LIMIT" ]; then
     if [ -n "${CYBERDISTRO_BUNDLE_AI:-}" ]; then
-        die "ISO ≥ 2 GiB: too large for a GitHub release asset. Add CYBERDISTRO_TRIM_FIRMWARE=1, or pick a smaller model via CYBERDISTRO_AI_MODEL_REPO/FILE/SHA256."
+        die "ISO ≥ 2 GiB: too large for a GitHub release asset. Pick a smaller model/quant via CYBERDISTRO_AI_MODEL_FILE + CYBERDISTRO_AI_MODEL_SHA256 (e.g. Qwen3-0.6B-Q2_K.gguf)."
     fi
     log "WARNING: ISO ≥ 2 GiB — it will not upload as a GitHub release asset."
 fi
